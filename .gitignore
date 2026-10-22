@@ -7,9 +7,11 @@ node_modules/
 inbox/*
 outbox/*
 my-sounds/*
+my-style-refs/*
 !inbox/.gitkeep
 !outbox/.gitkeep
 !my-sounds/.gitkeep
+!my-style-refs/.gitkeep
 my-style.md
 my-rules.md
 *.transcribe.mp3
