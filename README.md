@@ -1,6 +1,6 @@
 # free247editor
 
-![free247editor banner — Drop footage. Shape the story. Refine together.](<https://ghrb.waren.build/render/banner?header=free247editor&subheader=Drop+footage.+Shape+the+story.+Refine+together.&bg=0D1820-1C6B5E&color=FFFFFF&subheadercolor=D8EEE7&headerfont=Inter&subheaderfont=Inter>)
+![free247editor repository banner](<https://ghrb.waren.build/banner?header=free247editor&subheader=From+raw+footage+to+your+final+cut&bg=15181D-282F37&bgimg=https%3A%2F%2Fimages.pexels.com%2Fphotos%2F1188751%2Fpexels-photo-1188751.jpeg%3Fauto%3Dcompress%26cs%3Dtinysrgb%26fit%3Dcrop%26h%3D627%26w%3D1200&bgbrightness=42&bgcontrast=110&bgsaturation=55&bgblur=1&color=FFFFFF&subheadercolor=D7E3F4&headerfont=Space+Grotesk&subheaderfont=Inter&support=true>)
 
 [![License](https://img.shields.io/github/license/riecodes/free247editor?style=flat-square&color=green)](LICENSE) ![Agent Skills](https://img.shields.io/badge/Agent-Skills-8A2BE2?style=flat-square) ![Claude Code](https://img.shields.io/badge/Claude%20Code-ready-D97757?style=flat-square&logo=anthropic&logoColor=white) ![Price](https://img.shields.io/badge/price-free-brightgreen?style=flat-square)
 
