@@ -1,144 +1,130 @@
 # free247editor
 
-![License](https://img.shields.io/github/license/riecodes/free247editor?style=flat-square&color=green) ![Agent Skills](https://img.shields.io/badge/Agent-Skills-8A2BE2?style=flat-square) ![Claude Code](https://img.shields.io/badge/Claude%20Code-ready-D97757?style=flat-square&logo=anthropic&logoColor=white) ![Price](https://img.shields.io/badge/price-free-brightgreen?style=flat-square)
+![free247editor repository banner](<https://ghrb.waren.build/banner?header=free247editor&subheader=From+raw+footage+to+your+final+cut&bg=15181D-282F37&bgimg=https%3A%2F%2Fimages.pexels.com%2Fphotos%2F1188751%2Fpexels-photo-1188751.jpeg%3Fauto%3Dcompress%26cs%3Dtinysrgb%26fit%3Dcrop%26h%3D627%26w%3D1200&bgbrightness=42&bgcontrast=110&bgsaturation=55&bgblur=1&color=FFFFFF&subheadercolor=D7E3F4&headerfont=Space+Grotesk&subheaderfont=Inter&support=true>)
 
-A free, open-source personal video editor that runs inside your AI coding agent: Claude Code,
-Codex, Cursor, Antigravity, Gemini CLI, GitHub Copilot, Windsurf, and others that support
-[Agent Skills](https://agentskills.io).
+[![License](https://img.shields.io/github/license/riecodes/free247editor?style=flat-square&color=green)](LICENSE) ![Agent Skills](https://img.shields.io/badge/Agent-Skills-8A2BE2?style=flat-square) ![Claude Code](https://img.shields.io/badge/Claude%20Code-ready-D97757?style=flat-square&logo=anthropic&logoColor=white) ![Price](https://img.shields.io/badge/price-free-brightgreen?style=flat-square)
 
-Drop in a raw video and say **"edit this"**. You get back a cut, captioned edit with motion
-graphics, zoom-ins, and sound. Then give notes in plain words (English, Tagalog, Taglish),
-the way you would to a human editor. Lasting notes become rules it follows on every
-future edit, so it learns your style.
+A free, open-source personal video editor that runs inside an AI coding agent, including
+Codex, Claude Code, Cursor, Antigravity, Gemini CLI, GitHub Copilot, and Windsurf.
 
-## Setup (once)
+Drop in a raw video and ask for an edit. Get a cut, captioned draft with motion graphics,
+zoom-ins, and sound, then give feedback in plain words. It understands English, Tagalog,
+and Taglish, and can carry lasting editing notes into future projects.
 
-### One prompt
+## ✨ Features
 
-Open your agent in any folder (for example `claude` or `codex` in a terminal, or a new chat
-in Cursor or Antigravity) and paste:
+- **Tighter cuts:** remove dead air, breaths, false starts, and retakes.
+- **Captions:** choose word-by-word captions, highlighted key words, keyword pills, or subtitles.
+- **Short-form editing:** start with vertical 9:16 framing for Reels, TikTok, and Shorts; request a separately composed 16:9 version for YouTube.
+- **Motion and reframing:** add animated cards, overlays, and zoom-ins that keep the speaker clear.
+- **Style choices:** guide pacing, color, captions, hooks, and sound with plain-language notes.
+- **A workflow that learns:** lasting feedback is saved in `my-rules.md` and applied to later edits.
+- **Local drafts:** rendered videos stay in `outbox/`; the editor does not post videos for you.
 
-```text
-Set up free247editor for me. Clone https://github.com/riecodes/free247editor.git into my
-Documents folder (install Git first if it is missing, after asking me). Then follow the
-"start" steps in its skill, .agents/skills/free247editor/SKILL.md: run node setup.mjs from
-that folder, install anything it reports missing after asking me, help me choose free
-transcription (a Groq key, which you get for me if you have browser tools such as Claude in
-Chrome, or local faster-whisper), open the test video, and walk me through style setup. When
-you finish, tell me the full path of the inbox folder and remind me to open my agent in the
-free247editor folder from now on.
+## 🚀 Getting Started
+
+### Requirements
+
+- An AI coding agent that can run terminal commands. The project includes an Agent Skills workflow for Codex and other compatible agents.
+- Node.js 22 or newer, Git, FFmpeg (including `ffprobe`), and Chrome or Chromium.
+- For transcription, choose a Groq API key or local `faster-whisper` with Python. Groq mode sends extracted audio to Groq; local transcription keeps media on your computer.
+- About 1 GB of free disk space.
+
+### Install and set up
+
+Clone the repository and open its folder in your agent:
+
+```sh
+git clone https://github.com/riecodes/free247editor.git
+cd free247editor
 ```
 
-From then on, open your agent in the `free247editor` folder so it finds the skill. The
-Claude desktop app works too: in its Code tab, pick Local and the folder.
+In Codex, open this folder as the workspace. Then type `start`. The agent checks your tools,
+installs the pinned Herk Edit Kit engine, renders a test video, helps you choose a transcription
+option, and walks you through your editing style. Setup needs internet access to download the
+engine and any missing dependencies.
 
-### Step by step
+When setup finishes, preview `outbox/setup-test.mp4`.
 
-1. **Get it.** `git clone https://github.com/riecodes/free247editor.git`, or use
-   *Code > Download ZIP* on GitHub and unzip it.
-2. **Open the folder in your agent.** In a terminal: `cd free247editor` then `claude` or
-   `codex`. In Cursor, Antigravity, or Windsurf, open the folder as the workspace.
-3. **Type `start`.** The agent checks your computer, installs what is missing (with your OK),
-   renders a test video, and asks a few questions about your style.
+## 📖 Usage
 
-## Editing
+1. Put a source video in `inbox/`, or attach it in your agent's chat.
+2. Say **"edit this"** or, in Codex, call `$free247editor`.
+3. Review the draft in `outbox/` and describe the changes you want.
+4. Continue until the edit is right, then say **"final"** for a full-quality render.
 
-1. Put a raw video in the `inbox` folder, or drag it into the agent's chat.
-2. Say **"edit this"**.
-3. Watch the draft from `outbox`, say what to change, and repeat until you say "final".
+For horizontal YouTube framing, ask for a 16:9 edit. The workflow composes it for that format
+instead of simply cropping a vertical version. The output includes an MP4 and an editable
+HyperFrames project in `kit/video-projects/<name>`; it does not create a CapCut project. Stock
+footage and music are not included. Add your own music and sound effects to `my-sounds/`.
 
-Plain words are enough; every agent picks the skill from its description. You can also call
-it by name: `/free247editor` in Claude Code and Cursor, `$free247editor` in Codex.
+## ⚙️ Configuration
 
-Vertical 9:16 for Reels, TikTok, and Shorts by default. Ask for a horizontal version for
-YouTube and it gets its own framing and text placement.
+### Transcription
 
-## What it does
+Choose one of these options:
 
-| | |
+- **Groq:** get a key from [Groq](https://console.groq.com/keys) and add `GROQ_API_KEY` to `.env`. The editor extracts audio from the source video and sends that audio to Groq for transcription.
+- **Local:** install Python and `faster-whisper` with `pip install faster-whisper`, then use the local transcription option. Transcription runs on your computer.
+
+The software is free. Your AI agent plan may have its own costs. Groq's current limits and
+pricing are set by Groq; the editor will not use paid services such as ElevenLabs or Kie.ai
+without asking first.
+
+### Personal style and local files
+
+| Path | Purpose |
 | --- | --- |
-| Cuts | Removes dead air, breaths, false starts, and retakes |
-| Captions | Word by word, bold key words, key-word pills, or subtitles, in your position and colors |
-| Hook | Big text in the first 3 seconds, if you want it |
-| Motion graphics | Animated cards, pop-up clips, and overlays (HyperFrames + GSAP) |
-| Camera | Zoom-ins and reframing that keep your face clear |
-| Color | Natural, warm, cool, black and white, or orange and teal |
-| Sound | Sound effects and a music bed from files you put in `my-sounds` |
-| Learning | Your notes are saved as rules in `my-rules.md` and applied every time |
+| `inbox/` | Source footage for edits. |
+| `outbox/` | Draft and final MP4s, including the setup preview. |
+| `my-style.md` | Your preferred format, pacing, captions, color, graphics, and sound. |
+| `my-rules.md` | Lasting preferences learned from your feedback. |
+| `my-sounds/` | Music and sound effects you provide. |
+| `kit/` | The pinned Herk Edit Kit engine installed by setup. |
 
-## What you need
+Your footage, renders, style, rules, and API key are excluded from Git by `.gitignore`.
+When using Groq, extracted audio is sent to Groq as described above.
 
-- **An AI coding agent that can run terminal commands**, such as Claude Code (paid Claude
-  plan; Pro works, Max is better if you edit often), Codex, Cursor, Antigravity, Gemini CLI,
-  GitHub Copilot agent mode, or Windsurf. Editing uses a lot of usage. Codex blocks internet
-  in its sandbox by default, so approve network access when setup or transcription asks.
-- **Node.js 22+, Git, FFmpeg, and Chrome.** Setup tells you what is missing and the agent can
-  install it for you.
-- **Transcription, free either way:** a free [Groq](https://console.groq.com/keys) key
-  (fast, best for Taglish), or [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
-  on your own computer (`pip install faster-whisper`, needs Python).
-- About 1 GB of disk space.
+## 📚 Documentation
 
-Tested on Windows 11 with Claude Code (setup, test render, transcription, and the cutting
-tools). The other agents read the same standard files but are not tested yet. The editing
-engine is cross-platform, so macOS and Linux should work, but they are not tested yet either.
+- [Editor workflow](.agents/skills/free247editor/SKILL.md): setup, editing, style questions, and how feedback becomes lasting rules.
+- [Herk Edit Kit](https://github.com/nateherkai/herk-edit-kit): the editing engine and its video-editing tools.
 
-## Costs
+## 🛠️ Development
 
-The software is free. You pay only for your agent's plan. Groq's free tier covers normal
-use. The agent will never call a paid service (ElevenLabs, Kie.ai, or others) without asking.
+The repository has no separate package or test suite. `node setup.mjs` performs the local
+setup and renders a test video; it downloads the pinned editing engine into `kit/` and writes
+the preview to `outbox/`. To update the engine, change `KIT_COMMIT` in `setup.mjs`. Preserve
+any projects under `kit/video-projects/` before replacing the installed `kit/` directory.
 
-## How each agent finds it
+Codex and other compatible agents can read the shared skill in `.agents/skills/`. The project
+has been tested on Windows 11 with Claude Code; Codex and the other listed agents have not yet
+been tested by the maintainers. Claude Code reads the matching skill entry in `.claude/skills/`;
+`AGENTS.md` tells agents to load the free247editor skill. The Herk Edit Kit's AI Automation
+Society brand assets belong to their owner and are not licensed for reuse.
 
-The whole editor is one skill, `.agents/skills/free247editor/SKILL.md`, in the shared
-Agent Skills folder that Codex, Cursor, Antigravity, Gemini CLI, GitHub Copilot, Windsurf,
-and OpenCode read. Claude Code reads skills only from `.claude/skills/`, so a short copy
-there points to the same file. `AGENTS.md`, which `CLAUDE.md` imports, tells every agent to
-use the skill. Edit only `.agents/skills/free247editor/SKILL.md`; if you change its
-description, copy the new one into `.claude/skills/free247editor/SKILL.md` too.
+## 🤝 Contributing
 
-## Not included
+There is no separate contribution guide yet. For a proposed fix or improvement, open an issue
+or pull request on the [upstream repository](https://github.com/riecodes/free247editor).
+Discuss larger changes in an issue first.
 
-- An exported CapCut project. You get the MP4 plus the editable HyperFrames project in
-  `kit/video-projects/<name>`; open it in HyperFrames Studio with `npx hyperframes preview`.
-- Stock music or footage. Bring your own into `my-sounds` and `inbox`.
-- Posting. It never uploads your videos anywhere.
+## 🐛 Issues & Support
 
-## Folders
+Report bugs and request improvements in the [upstream issue tracker](https://github.com/riecodes/free247editor/issues).
+For questions about a proposed change, use its issue or pull request so the project discussion
+stays with the code.
 
-```
-free247editor/
-  .agents/skills/    the free247editor skill: how your agent runs the editor
-  .claude/skills/    pointer to that skill for Claude Code
-  AGENTS.md          tells every agent to use the skill (CLAUDE.md imports it)
-  setup.mjs          one-time setup (safe to re-run)
-  tools/             free transcription
-  inbox/             your raw videos
-  outbox/            drafts and finals
-  my-style.md        your style (created at setup, stays private)
-  my-rules.md        rules learned from your notes (stays private)
-  my-sounds/         your music and sound effects
-  kit/               the editing engine (installed by setup)
-```
+## 📄 License
 
-Your footage, renders, style, rules, and key are in `.gitignore` and never leave your computer.
+free247editor is licensed under the [MIT License](LICENSE).
 
-## Updating the engine
+## 👥 Authors & Contributors
 
-Setup installs a pinned version of the engine. To move to a newer one, change `KIT_COMMIT` in
-`setup.mjs`, move any projects you want to keep out of `kit/video-projects`, delete `kit/`, and
-type `start` again. Your style, rules, inbox, and outbox are untouched.
+Created and maintained by [riecodes](https://github.com/riecodes). See the
+[contributors graph](https://github.com/riecodes/free247editor/graphs/contributors) for other
+contributors. The editing engine is [Herk Edit Kit](https://github.com/nateherkai/herk-edit-kit)
+by [Nate Herk](https://github.com/nateherkai), built on [HyperFrames](https://github.com/heygen-com/hyperframes)
+and [GSAP](https://gsap.com/). free247editor is not affiliated with Nate Herk, HeyGen, or any
+of the AI agent makers.
 
-## Credits
-
-The editing engine is [Herk Edit Kit](https://github.com/nateherkai/herk-edit-kit) by
-Nate Herk (MIT), built on [HyperFrames](https://github.com/heygen-com/hyperframes) and
-[GSAP](https://gsap.com/). Setup downloads it from its own repository; it is not copied
-here. The AI Automation Society brand assets inside that kit belong to their owner and are
-not licensed for reuse.
-
-free247editor is not affiliated with Nate Herk, HeyGen, or any of the AI agent makers.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
