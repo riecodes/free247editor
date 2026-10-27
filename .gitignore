@@ -6,6 +6,9 @@ node_modules/
 app/src-tauri/binaries/
 app/dist/
 
+# Private notes behind the public docs
+docs/private/
+
 # Your footage, renders, style, rules, and keys stay local
 .env
 inbox/*
