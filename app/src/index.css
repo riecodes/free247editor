@@ -1,0 +1,189 @@
+/* Scan only src/ for classes: edits to engine files or docs must never reload the window. */
+@import "tailwindcss" source(".");
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Colors from the mockup. Light values on :root (the default for everyone), dark under .dark.
+   Type: Space Grotesk 600 for titles, Geist for UI text, Geist Mono for numbers, times and paths. */
+@theme inline {
+  --font-sans: "Geist Variable", system-ui, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Geist Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, Consolas, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--secondary);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-header: var(--header);
+  --color-faint: var(--faint);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-sel: var(--sel);
+  --color-sel-line: var(--sel-line);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-ink: var(--ok-ink);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-line: var(--warn-line);
+  --color-warn-bg: var(--warn-bg);
+  --color-final: var(--final);
+  --color-final-line: var(--final-line);
+  --color-final-ink: var(--final-ink);
+  --color-final-strong: var(--final-strong);
+  --color-final-btn: var(--final-btn);
+  --color-final-btn-ink: var(--final-btn-ink);
+  --color-track: var(--track);
+  --color-bar: var(--bar);
+  --color-seg: var(--seg);
+  --color-seg-ink: var(--seg-ink);
+  --color-drop: var(--drop);
+  --color-drop-on: var(--drop-on);
+  --color-drop-line: var(--drop-line);
+  --color-drop-line-on: var(--drop-line-on);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.75rem;
+  --background: #f6f7fb;
+  --header: #ffffff;
+  --card: #ffffff;
+  --secondary: #eef0f5;
+  --border: #dfe2ea;
+  --input: #c3c8d4;
+  --foreground: #141622;
+  --muted-foreground: #4f566a;
+  --faint: #5f667b;
+  --brand: #4338ca;
+  --brand-strong: #3730a3;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --ring: #c3c8d4;
+  --sel: #eef0ff;
+  --sel-line: #4f46e5;
+  --ok-bg: #d1fae5;
+  --ok: #047857;
+  --ok-ink: #047857;
+  --warn: #d97706;
+  --warn-ink: #92400e;
+  --warn-line: #f2c27a;
+  --warn-bg: #fdf3e3;
+  --destructive: #b42318;
+  --final: #ecfdf5;
+  --final-line: #a7f3d0;
+  --final-ink: #065f46;
+  --final-strong: #064e3b;
+  --final-btn: #047857;
+  --final-btn-ink: #ffffff;
+  --track: #e3e6ee;
+  --bar: #4f46e5;
+  --seg: #141622;
+  --seg-ink: #ffffff;
+  --drop: #ffffff;
+  --drop-on: #eef0ff;
+  --drop-line: #c3c8d4;
+  --drop-line-on: #4f46e5;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #111318;
+  --header: #15171d;
+  --card: #191c23;
+  --secondary: #222630;
+  --border: #2c313d;
+  --input: #3b4252;
+  --foreground: #eceef3;
+  --muted-foreground: #a3a9b8;
+  --faint: #8a91a3;
+  --brand: #a5b4fc;
+  --brand-strong: #c7d2fe;
+  --ring: #3b4252;
+  --sel: #1e1f3b;
+  --sel-line: #6366f1;
+  --ok-bg: #064e3b;
+  --ok: #34d399;
+  --ok-ink: #6ee7b7;
+  --warn: #fbbf24;
+  --warn-ink: #fcd34d;
+  --warn-line: #92400e;
+  --warn-bg: #2b2112;
+  --destructive: #fca5a5;
+  --final: #0b2a22;
+  --final-line: #065f46;
+  --final-ink: #a7f3d0;
+  --final-strong: #ecfdf5;
+  --final-btn: #ecfdf5;
+  --final-btn-ink: #064e3b;
+  --track: #222630;
+  --bar: #6366f1;
+  --seg: #eceef3;
+  --seg-ink: #111318;
+  --drop: #15171d;
+  --drop-on: #1e1f3b;
+  --drop-line: #3b4252;
+  --drop-line-on: #a5b4fc;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  h1,
+  h2,
+  .font-display {
+    letter-spacing: -0.025em;
+  }
+}
+
+/* The setup ring's one subtle motion; none for people who turn motion off. */
+@media (prefers-reduced-motion: no-preference) {
+  .f247-breathe {
+    animation: f247-breathe 4s ease-in-out infinite;
+  }
+}
+@keyframes f247-breathe {
+  50% {
+    transform: scale(1.025);
+  }
+}

@@ -2,6 +2,10 @@
 kit/
 node_modules/
 
+# The Windows app: downloaded portable Node and build output
+app/src-tauri/binaries/
+app/dist/
+
 # Your footage, renders, style, rules, and keys stay local
 .env
 inbox/*

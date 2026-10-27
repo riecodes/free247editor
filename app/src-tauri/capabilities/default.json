@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The window may start the engine (only app/engine/main.mjs on the bundled Node), talk to it, and pick a video file.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "binaries/node",
+          "sidecar": true,
+          "args": [{ "validator": "^.+[\\\\/]engine[\\\\/]main\\.mjs$" }, { "validator": "^--(dev|prod)$" }]
+        }
+      ]
+    },
+    "shell:allow-stdin-write",
+    "shell:allow-kill"
+  ]
+}

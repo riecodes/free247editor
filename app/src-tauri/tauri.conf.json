@@ -1,0 +1,61 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "free247editor",
+  "mainBinaryName": "free247editor",
+  "version": "0.1.0",
+  "identifier": "com.riecodes.free247editor",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5247",
+    "beforeDevCommand": "npm run fetch-node && npm run dev",
+    "beforeBuildCommand": "npm run fetch-node && npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "free247editor",
+        "width": 1200,
+        "height": 820,
+        "minWidth": 480,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; media-src 'self' asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; font-src 'self' data: asset: http://asset.localhost",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$LOCALDATA/free247editor/work/**", "$LOCALDATA/free247editor-dev/work/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "externalBin": ["binaries/node"],
+    "resources": {
+      "binaries/npm/": "npm/",
+      "../engine/": "engine/",
+      "../../AGENTS.md": "workspace/AGENTS.md",
+      "../../CLAUDE.md": "workspace/CLAUDE.md",
+      "../../setup.mjs": "workspace/setup.mjs",
+      "../../.env.example": "workspace/.env.example",
+      "../../tools/": "workspace/tools/",
+      "../../.agents/": "workspace/.agents/",
+      "../../.claude/skills/": "workspace/.claude/skills/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}
