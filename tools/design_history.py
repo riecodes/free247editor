@@ -13,7 +13,8 @@ plan.json lists the design choices of one edit. Every field is a list of short n
   {"look": ["warm"], "fonts": ["Fraunces", "DM Sans"], "captions": ["cream pill, low, word by word"],
    "hook": ["kinetic stacked words"], "effects": ["PU01", "CT01"], "transitions": ["whip pan"],
    "shots": ["exploded-view"], "animations": ["paper note drop"], "broll": ["kitchen-wide.mp4"],
-   "graphics": ["price card"], "color": ["warm grade", "#C8643B"], "music": ["piano-soft.mp3"], "sfx": ["paper rustle"]}
+   "graphics": ["price card"], "color": ["warm grade", "#C8643B"], "music": ["piano-soft.mp3"], "sfx": ["paper rustle"],
+   "thumbnail": ["face right, 2-line stacked text left", "yellow underline", "SOLD IN 7 DAYS"]}
 History lives in looks/history.json (shared with looks/build_look.py, merged by slug).
 """
 import datetime
@@ -25,7 +26,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 HIST = ROOT / "looks" / "history.json"
 STYLES = ROOT / "styles"
 FIELDS = ["look", "fonts", "captions", "hook", "effects", "transitions", "shots", "animations",
-          "broll", "graphics", "color", "music", "sfx"]
+          "broll", "graphics", "color", "music", "sfx", "thumbnail"]
 
 
 def load():

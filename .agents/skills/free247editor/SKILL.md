@@ -124,6 +124,36 @@ in the partner section below.
    `python tools/design_history.py record <slug> kit/video-projects/<slug>/design-plan.json`.
 7. Render a draft, run the partner QC, and copy it to `outbox/<slug>-v1.mp4`. Open it. Tell the
    user in 3 to 5 short bullets what you did and which Look, then ask for notes.
+8. Make the thumbnail (see "Thumbnails") and deliver it with the draft. Every video gets one.
+
+## Thumbnails
+
+Every video gets its own professional, scroll-stopping thumbnail, made from the video itself.
+
+1. **Find the moment.** `python tools/thumb_frames.py kit/video-projects/<slug>/assets/raw.mp4
+   kit/video-projects/<slug>/thumb` and look at `thumb/candidates.jpg`. Pick the strongest
+   expression or reaction (eyes open, clear emotion, sharp), or the most striking scene (the
+   property, the reveal, the result) when that tells the topic better. Add frames at moments the
+   transcript says are the peak if the grid missed them.
+2. **Write the text.** 2 to 5 words, large, that say the topic and make people want to watch
+   ("SOLD IN 7 DAYS", "3 MISTAKES BUYERS MAKE"). Taglish is fine when the video is Taglish. True
+   to the video: no claim, number or promise the video doesn't make.
+3. **Design it** as a one-frame HyperFrames composition in `thumb/`, in the video's Look (or its
+   favorite style): its fonts and colors, a cut-out of the person (`npx hyperframes
+   remove-background <frame.png> -o subject.png`) over a cleaned or blurred background, a
+   contrast layer or outline so text reads on any background, and one graphic accent (arrow,
+   underline, badge, shape) that suits the theme. Face and text never overlap; keep text
+   readable at phone-grid size.
+4. **Sizes.** Always `outbox/<slug>-thumb.jpg` at 1080×1920 for Reels covers, with the face and
+   text inside the middle 1080×1350 (the profile grid crops to 4:5). Also
+   `outbox/<slug>-thumb-16x9.jpg` at 1280×720 for YouTube and Facebook when the video is
+   horizontal, long-form, or the user asks; recompose it, don't just crop.
+5. **Check.** Look at it full size and shrunk to 270 px wide: text readable, face clear, nothing
+   in the Reels safe-zone margins, balanced. Make two different concepts (A and B) and let the
+   user pick; show them side by side.
+6. **Never twice.** Put the layout, text arrangement, accent and color in `design-plan.json`
+   under `"thumbnail"`, so `design_history.py check` rejects a design used in the last 5 videos.
+   A favorite style's thumbnail approach may return, but with a new layout and text.
 
 ## Looks
 
@@ -138,7 +168,7 @@ The user's rule: no two videos may look the same. Before planning, run
 `python tools/design_history.py recent` and treat everything it lists as used. For the new edit,
 change every one of these from the last 5 edits: Look, fonts, caption style, hook style,
 effects, transitions, shots and animations, B-roll clips, graphics (cards, lists, lower thirds),
-color (grade and accent), music and sound effects. When a Look returns, give it new fonts of the
+color (grade and accent), music, sound effects and the thumbnail design. When a Look returns, give it new fonts of the
 same mood (free Google Fonts .woff2 files in the project, `"font_swap"` in the Looks config), a
 new accent color and different effects. Draw fresh ideas from all the partners: ai-impact
 effects, video-shotcraft's 124 shot cards, the 450 HyperFrames registry blocks. Only the house
