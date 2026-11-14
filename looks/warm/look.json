@@ -1,0 +1,21 @@
+{
+  "name": "warm",
+  "label": "Warm lifestyle",
+  "fonts": [
+    {"family": "Fraunces", "weight": 700, "style": "normal", "file": "fraunces-700.woff2"},
+    {"family": "Fraunces", "weight": 900, "style": "normal", "file": "fraunces-900.woff2"},
+    {"family": "DMSans", "weight": 500, "style": "normal", "file": "dmsans-500.woff2"},
+    {"family": "GreatVibes", "weight": 400, "style": "normal", "file": "greatvibes-400.woff2"}
+  ],
+  "caption": {"maxWords": 3, "case": "none"},
+  "hook": {"mode": "stack"},
+  "motion": {
+    "hook": {"dur": 0.45, "ease": "back.out(1.6)", "from": {"opacity": 0, "y": 24, "rotation": -4}, "to": {"opacity": 1, "y": 0, "rotation": 0}},
+    "hookOut": {"dur": 0.35, "ease": "power2.in"},
+    "cap": {"dur": 0.28, "ease": "back.out(1.5)", "from": {"opacity": 0, "y": 16}, "to": {"opacity": 1, "y": 0}},
+    "card": {"dur": 0.5, "ease": "back.out(1.4)", "from": {"opacity": 0, "y": 40, "rotation": 4}, "to": {"opacity": 1, "y": 0, "rotation": -2}},
+    "item": {"dur": 0.35, "ease": "back.out(1.6)", "from": {"opacity": 0, "y": 10}, "to": {"opacity": 1, "y": 0}},
+    "push": 1.02,
+    "punch": 0
+  }
+}

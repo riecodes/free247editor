@@ -1,0 +1,20 @@
+{
+  "name": "minimal",
+  "label": "Clean & minimal",
+  "fonts": [
+    {"family": "Jakarta", "weight": 300, "style": "normal", "file": "jakarta-300.woff2"},
+    {"family": "Jakarta", "weight": 500, "style": "normal", "file": "jakarta-500.woff2"},
+    {"family": "Jakarta", "weight": 700, "style": "normal", "file": "jakarta-700.woff2"}
+  ],
+  "caption": {"maxWords": 5, "case": "none"},
+  "hook": {"mode": "stack"},
+  "motion": {
+    "hook": {"dur": 0.55, "ease": "power2.out", "from": {"opacity": 0, "y": 8}, "to": {"opacity": 1, "y": 0}},
+    "hookOut": {"dur": 0.4, "ease": "power2.in"},
+    "cap": {"dur": 0.3, "ease": "power2.out", "from": {"opacity": 0, "y": 6}, "to": {"opacity": 1, "y": 0}},
+    "card": {"dur": 0.55, "ease": "power2.out", "from": {"opacity": 0, "y": 10}, "to": {"opacity": 1, "y": 0}},
+    "item": {"dur": 0.45, "ease": "power2.out", "from": {"opacity": 0}, "to": {"opacity": 1}},
+    "push": 1.0,
+    "punch": 0
+  }
+}

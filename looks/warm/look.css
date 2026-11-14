@@ -1,0 +1,39 @@
+/* Warm lifestyle: soft chunky serif + handwritten script, cream paper notes with tape, terracotta accents, warm grade. */
+:root { --cream: #FFF6EA; --paper: #FFF9F0; --terra: #C8643B; --brown: #3B2A20; --peach: rgba(246,201,168,.85); }
+.grade { filter: sepia(0.18) saturate(1.1) brightness(1.03) hue-rotate(-6deg); }
+#topbg, #capbg { display: none; }
+
+/* Hook: cream label pill, big soft serif line, terracotta script accent, slight tilt */
+#hook { position: absolute; left: 160px; width: 760px; top: 230px; padding: 30px 40px 26px; text-align: center; border-radius: 6px;
+  background: var(--paper); box-shadow: 0 18px 40px rgba(59,42,32,.35); }
+#hook::before { content: ""; position: absolute; left: 300px; top: -18px; width: 160px; height: 40px; background: var(--peach); transform: rotate(-4deg); }
+#hook .l0 { display: inline-block; padding: 10px 28px; border-radius: 999px; background: rgba(200,100,59,.12); color: var(--brown);
+  font: 500 36px/1.2 DMSans; }
+#hook .l1 { font: 900 112px/1.05 Fraunces; color: var(--brown); margin-top: 10px; }
+#hook .l2 { font: 400 120px/1.3 GreatVibes; color: var(--terra); }
+
+/* Captions: cream rounded pill low on the frame, brown text, key words in terracotta serif */
+.cap { position: absolute; left: 60px; width: 960px; top: calc(var(--chin) * 1px + 420px); height: 140px;
+  display: flex; align-items: center; justify-content: center; text-align: center; }
+.cap .t { padding: 14px 34px 18px; border-radius: 999px; background: var(--cream); color: var(--brown); font: 500 44px/1.2 DMSans;
+  box-shadow: 0 10px 30px rgba(59,42,32,.25); }
+.cap b { font: 700 52px/1.1 Fraunces; color: var(--terra); }
+
+/* List: paper note above the head with a tape strip, handwritten title, terracotta hand checks */
+#list { position: absolute; left: 160px; width: 760px; top: 220px; padding: 34px 44px 30px; border-radius: 6px;
+  background: var(--paper); color: var(--brown); box-shadow: 0 18px 40px rgba(59,42,32,.35); }
+#list::before { content: ""; position: absolute; left: 270px; top: -18px; width: 160px; height: 40px; background: var(--peach);
+  transform: rotate(-4deg); }
+#list h3 { margin: 0 0 18px; font: 400 70px/1.25 GreatVibes; color: var(--terra); }
+.row { display: flex; align-items: center; gap: 18px; height: 58px; font: 500 42px DMSans; }
+.row .chk svg { width: 46px; height: 46px; display: block; }
+
+/* Notes: one idea per taped paper card, script line + soft serif line + small line */
+.note { position: absolute; left: 190px; width: 700px; padding: 34px 44px 32px; border-radius: 6px; text-align: center;
+  background: var(--paper); color: var(--brown); box-shadow: 0 18px 40px rgba(59,42,32,.35); }
+.note::before { content: ""; position: absolute; left: 270px; top: -18px; width: 160px; height: 40px; background: var(--peach);
+  transform: rotate(-4deg); }
+.note .ns { font: 400 76px/1.4 GreatVibes; color: var(--terra); margin-bottom: 4px; }
+.note .nb { font: 900 62px/1.2 Fraunces; text-wrap: balance; }
+.note .nm { font: 500 36px/1.3 DMSans; margin-top: 16px; text-wrap: balance; }
+.row .draw { stroke: var(--terra); stroke-width: 6; }

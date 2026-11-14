@@ -1,0 +1,20 @@
+{
+  "name": "luxury",
+  "label": "Luxury real estate",
+  "fonts": [
+    {"family": "Playfair", "weight": 400, "style": "normal", "file": "playfair-400.woff2"},
+    {"family": "Playfair", "weight": 400, "style": "italic", "file": "playfair-400-italic.woff2"},
+    {"family": "InterLight", "weight": 300, "style": "normal", "file": "inter-300.woff2"}
+  ],
+  "caption": {"maxWords": 4, "case": "none"},
+  "hook": {"mode": "stack"},
+  "motion": {
+    "hook": {"dur": 0.9, "ease": "sine.out", "from": {"opacity": 0, "y": 14, "filter": "blur(8px)"}, "to": {"opacity": 1, "y": 0, "filter": "blur(0px)"}},
+    "hookOut": {"dur": 0.6, "ease": "sine.in"},
+    "cap": {"dur": 0.45, "ease": "sine.out", "from": {"opacity": 0}, "to": {"opacity": 1}},
+    "card": {"dur": 0.9, "ease": "sine.out", "from": {"opacity": 0, "filter": "blur(6px)"}, "to": {"opacity": 1, "filter": "blur(0px)"}},
+    "item": {"dur": 0.8, "ease": "sine.out", "from": {"opacity": 0, "x": -12}, "to": {"opacity": 1, "x": 0}},
+    "push": 1.04,
+    "punch": 0
+  }
+}
