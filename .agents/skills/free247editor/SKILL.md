@@ -1,6 +1,6 @@
 ---
 name: free247editor
-description: The user's personal video editor in this free247editor folder. Use for "start" or first-time setup; "edit this", "edit mo to", or a video dropped in or added to inbox/; notes on a draft ("faster", "bigger captions", "approved", "final"); a horizontal or YouTube version; or changing the user's style or rules. Runs setup.mjs, free transcription, and the Herk Edit Kit pipeline in kit/, renders drafts to outbox/, and saves lasting notes to my-rules.md.
+description: The user's personal video editor in this free247editor folder. Use for "start" or first-time setup; "edit this", "edit mo to", or a video dropped in or added to inbox/; notes on a draft ("faster", "bigger captions", "approved", "final"); a horizontal or YouTube version; a reference video link, refvids/, or "check refvids"; or changing the user's style or rules. Runs setup.mjs, free transcription, and the Herk Edit Kit pipeline in kit/, renders drafts to outbox/, and saves lasting notes to my-rules.md.
 ---
 
 # free247editor: the user's personal video editor
@@ -231,10 +231,14 @@ Whenever the user pastes a reference video link (any platform), without being as
    the user's videos, and how to build it here (Look, effect code, registry block, shot card).
 4. **Two independent editors.** free247editor and ai-impact-editor each pick, on their own,
    the techniques they would use and why; they may disagree.
-5. **Save it** to `styles/references/library.md`: a new entry (link, title, date, new
-   techniques, already-known ones, what improves on an older one, when to use each), and update
-   the cumulative technique index at the top. Never delete older techniques; mark a technique
-   superseded when a better one replaces it. Say it is saved only after the write succeeds.
+5. **Save it** to `styles/references/library.md`, the one library both editors share
+   (ai-impact-editor's skill points to the same file; never keep a second copy). First check
+   the technique index for each technique: if it is there, add the new ref to its sources and
+   rewrite its method when the new one is better (note "improved by refN"); if it is new, add a
+   row with its category. Then add the reference entry (link, title, date, new techniques,
+   already-known ones, what improved, when to use each). Never delete older techniques; mark one
+   superseded when a better one replaces it. Say it is saved only after the write succeeds and a
+   re-read shows the new rows.
 6. **Use it.** Read the library with `styles/mistakes.md` before planning every edit, and pick
    techniques that fit the video, not only the newest reference. Techniques the user rejects
    get marked "didn't work for us" with the reason.
