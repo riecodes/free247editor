@@ -220,7 +220,8 @@ keyword); the voice is always the loudest thing.
 Whenever the user pastes a reference video link (any platform), without being asked again:
 
 1. **Get the whole video.** The user uploads reference videos to `refvids/` (`ref1.mp4`,
-   `ref2.mp4`, ...); analyze any there that have no library entry yet. For a link, try `yt-dlp`
+   `ref2.mp4`, ...). Scan it only when the user says so ("check refvids"), then analyze every
+   video there that has no library entry yet. For a link, try `yt-dlp`
    into a new scratchpad folder; if it needs a login (Facebook does), ask the user to save it
    to `refvids/`. Never analyze from a thumbnail or preview, and never edit refvids as inbox.
 2. **Watch all of it.** Scene cuts (`ffmpeg -vf "select='gt(scene,0.3)',showinfo"`), a frame
