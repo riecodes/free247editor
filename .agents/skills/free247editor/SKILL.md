@@ -215,6 +215,29 @@ below y 1100; captions own the upper third, so cards sit below the chin; claims,
 comments and testimonials must be real (a comment-keyword CTA only when the user says a
 keyword); the voice is always the loudest thing.
 
+## Reference videos: the Editing Knowledge Library
+
+Whenever the user pastes a reference video link (any platform), without being asked again:
+
+1. **Get the whole video.** The user uploads reference videos to `refvids/` (`ref1.mp4`,
+   `ref2.mp4`, ...); analyze any there that have no library entry yet. For a link, try `yt-dlp`
+   into a new scratchpad folder; if it needs a login (Facebook does), ask the user to save it
+   to `refvids/`. Never analyze from a thumbnail or preview, and never edit refvids as inbox.
+2. **Watch all of it.** Scene cuts (`ffmpeg -vf "select='gt(scene,0.3)',showinfo"`), a frame
+   every 0.5 s on contact sheets, the transcript (`tools/transcribe.mjs`), and the audio with
+   earshot `timeline` (music, sound effects, sync to cuts) and `measure`.
+3. **Break it down** per technique: what, timestamp, how it was done, why it works, how it fits
+   the user's videos, and how to build it here (Look, effect code, registry block, shot card).
+4. **Two independent editors.** free247editor and ai-impact-editor each pick, on their own,
+   the techniques they would use and why; they may disagree.
+5. **Save it** to `styles/references/library.md`: a new entry (link, title, date, new
+   techniques, already-known ones, what improves on an older one, when to use each), and update
+   the cumulative technique index at the top. Never delete older techniques; mark a technique
+   superseded when a better one replaces it. Say it is saved only after the write succeeds.
+6. **Use it.** Read the library with `styles/mistakes.md` before planning every edit, and pick
+   techniques that fit the video, not only the newest reference. Techniques the user rejects
+   get marked "didn't work for us" with the reason.
+
 ## Revisions: until the user is happy
 
 Revise and redo as many times as it takes; the goal is a video the user is proud of
