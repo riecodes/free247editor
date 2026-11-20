@@ -208,6 +208,26 @@ from the project folder. If one is missing, say so in one line and carry on with
 | No final check | ai-impact-editor `reference/qc.md` | Run every check, then `edit_tools.py loudness <file> --fix` (−14 LUFS, true peak ≤ −1 dBTP). |
 | Can't hear the mix | earshot MCP tools | `measure` the draft, `timeline` to check sound effects land on cuts, `rank` to pick music from `my-sounds/`. |
 | Names misheard | ai-impact-editor `reference/vocab.json` | Add the user's names and products there or in the project's `vocab.json`. |
+| A beat with no footage to show | cinecode skill (`D:\cinecode`) | See "Animated scenes with cinecode" below. |
+
+### Animated scenes with cinecode
+
+cinecode makes short animated films entirely from code (three.js, Web Audio). Use it for:
+
+- **An insert inside an edit:** a hook opener, an explainer or process animation, a product or
+  listing shot, a map, a number reveal, or an end card, when the raw footage, the Look and the
+  registry have nothing that fits. Give cinecode a *complete brief* so it goes straight to a
+  draft: Quick mode, 1080×1920 at the edit's frame rate, the beat's exact length, the Look's
+  fonts and colours, text inside the house safe zones below, no narrator and no music (the
+  edit's voice and bed carry the sound; sound effects only if asked). Copy its `<title>.mp4`
+  into the project's `assets/` and place it like B-roll. One or two inserts per video at most,
+  each listed in the design plan so `design_history.py` sees it.
+- **A video with no footage at all** (an ad, a promo, an animated short): cinecode leads. Still
+  read `my-rules.md`, the library and `styles/mistakes.md` first, and record the result in
+  `design_history.py` so the next edit does not repeat it.
+
+cinecode keeps its own films folder and saved formats (`~/.cinecode/`); never make a film inside
+`D:\cinecode` or inside `kit/`.
 
 House rules (from ai-impact-editor, they apply to every edit): nothing between the eyes and the
 chin; text stays out of the top 220 px, bottom 420 px, 60 px each side and the right 140 px
