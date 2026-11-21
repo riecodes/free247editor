@@ -20,6 +20,9 @@ my-sounds/*
 my-style.md
 my-rules.md
 *.transcribe.mp3
+editor/work/
+.venv/
+setup-run.log
 
 # Sync tools
 *.sync-conflict-*
@@ -29,3 +32,8 @@ my-rules.md
 .DS_Store
 Thumbs.db
 __pycache__/
+
+styles/
+looks/history.json
+
+refvids/

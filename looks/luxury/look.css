@@ -1,0 +1,36 @@
+/* Luxury real estate: editorial serif, thin gold hairlines, cream on deep shadow, no boxes. */
+:root { --ink: #0E0D0B; --cream: #F4EDE1; --gold: #DCC08A; }
+.grade { filter: contrast(1.06) saturate(0.82) brightness(0.97); }
+
+/* Hook: centred stack above the head, framed by two gold hairlines */
+#topbg { position: absolute; left: 0; top: 0; width: 1080px; height: 640px;
+  background: linear-gradient(rgba(14,13,11,.82), rgba(14,13,11,.62) 62%, transparent); }
+#hook { position: absolute; left: 0; width: 1080px; top: 250px; text-align: center; color: var(--cream); }
+#hook::before, #hook::after { content: ""; display: block; width: 220px; height: 1px; margin: 0 auto; background: var(--gold); }
+#hook::before { margin-bottom: 12px; } #hook::after { margin-top: 14px; }
+#hook .l0 { font: 300 24px/1.4 InterLight; letter-spacing: .42em; text-transform: uppercase; }
+#hook .l1 { font: 400 78px/1.15 Playfair; margin-top: 4px; }
+#hook .l2 { font: italic 400 60px/1.2 Playfair; color: var(--gold); margin-top: 4px; }
+
+/* Captions: lower band, serif sentence case, keywords in gold italic, soft shadow band instead of a box */
+#capbg { position: absolute; left: 0; width: 1080px; top: calc(var(--chin) * 1px + 230px); height: 380px;
+  background: linear-gradient(transparent, rgba(14,13,11,.78) 38%, rgba(14,13,11,.78) 72%, transparent); }
+.cap { position: absolute; left: 90px; width: 900px; top: calc(var(--chin) * 1px + 400px); height: 140px;
+  display: flex; align-items: center; justify-content: center; text-align: center; }
+.cap .t { font: 400 54px/1.2 Playfair; color: var(--cream); text-shadow: 0 2px 14px rgba(0,0,0,.5); }
+.cap b { font: italic 400 58px/1.2 Playfair; color: var(--gold); }
+
+/* List: no card, a thin gold frame above the head */
+#list { position: absolute; left: 150px; width: 780px; top: 250px; padding: 16px 30px 18px; color: var(--cream);
+  border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); text-align: center; }
+#list h3 { margin: 0 0 8px; font: 300 22px/1.3 InterLight; letter-spacing: .4em; text-transform: uppercase; color: var(--gold); }
+.row { font: 400 46px/1.3 Playfair; display: flex; justify-content: center; align-items: center; gap: 22px; }
+.row .chk { width: 14px; height: 14px; transform: rotate(45deg); border: 1px solid var(--gold); background: none; flex: none; }
+.row .chk svg { display: none; }
+
+/* Notes: one idea per card, centred between gold hairlines above the head (same frame as the list) */
+.note { position: absolute; left: 140px; width: 800px; padding: 16px 24px 18px; text-align: center; color: var(--cream);
+  border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); }
+.note .ns { font: 300 22px/1.3 InterLight; letter-spacing: .4em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.note .nb { font: 400 64px/1.08 Playfair; text-wrap: balance; }
+.note .nm { font: italic 400 40px/1.2 Playfair; color: var(--gold); margin-top: 4px; text-wrap: balance; }
