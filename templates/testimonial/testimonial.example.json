@@ -1,0 +1,51 @@
+{
+  "_comment": "A filled-in sample with a made-up speaker. Copy to assets/testimonial.json and edit. Times are seconds; anchors: number | \"hookEnd\" | \"end\" | \"section:<label>\" | {\"word\": \"x\", \"after\": t} | {\"wordEnd\": \"x\", \"after\": t} (words from cut.json, lowercased, punctuation stripped).",
+  "format": "landscape",
+  "title": "Sample speaker - No Money Down testimonial",
+  "music": "Epedemic Music/ES_Moving Up - Origo.mp3",
+  "bedGain": -2.5,
+  "silenceDb": -45,
+  "noisyRoom": false,
+  "sections": [
+    ["hook", 27.03, 27.30, "Hook: the strongest line, moved to the open"],
+    ["hook", 28.26, 33.98, "Hook continues"],
+    ["intro", 0.62, 4.75, "Name and work"],
+    ["why", 5.36, 27.00, "Why they joined"],
+    ["family", 34.02, 48.86, "Who they do it for"],
+    ["lesson", 49.58, 69.66, "Biggest lesson"],
+    ["lesson", 86.78, 100.66, "Second lesson, last clean take (an earlier take dropped)"],
+    ["recommend", 100.96, 112.45, "Recommendation (\"100%\")"],
+    ["close", 113.10, 125.20, "Closing line"]
+  ],
+  "fillers": [
+    [20.62, 22.20, "repeated phrase with um"],
+    [46.60, 46.97, "um"],
+    [90.18, 91.30, "soft uh"],
+    [94.53, 98.18, "false start and repeat"],
+    [107.74, 108.40, "false start"],
+    [110.80, 111.20, "um"],
+    [114.18, 114.80, "soft uh"]
+  ],
+  "hook": { "q": "DIDN'T GROW UP RICH", "big": "CREATING A CHANGE." },
+  "name": { "name": "ALEX SANTOS", "role": "PROPERTY INVESTOR", "at": 5.7 },
+  "pills": [
+    { "text": "WHY THEY JOINED", "at": "section:why" },
+    { "text": "FOR THE FAMILY", "at": "section:family" },
+    { "text": "BIGGEST LESSON", "at": "section:lesson" },
+    { "text": "WOULD THEY RECOMMEND IT?", "at": { "word": "100%" }, "offset": -0.15, "duration": 2.8 }
+  ],
+  "emphasis": [
+    { "type": "words", "lines": ["GENERATIONAL", "WEALTH"], "at": { "word": "generational" }, "duration": 2.8 },
+    { "type": "strike", "struck": "JUST A SEMINAR", "replace": "A NEW MINDSET", "at": { "word": "it's", "after": 40 },
+      "strikeAt": { "word": "changed", "after": 44 }, "revealAt": { "word": "mindset", "after": 44 }, "until": 52.0 },
+    { "type": "big", "text": "100%", "at": { "word": "100%" }, "offset": -0.05, "duration": 2.4 }
+  ],
+  "zooms": [
+    { "label": "creating a change", "from": { "word": "creating" }, "to": "hookEnd" },
+    { "label": "generational wealth", "from": { "word": "generational" }, "to": { "wordEnd": "wealth" } },
+    { "label": "changed my mindset", "from": { "word": "changed", "after": 44 }, "to": { "wordEnd": "mindset", "after": 44 } },
+    { "label": "100%", "from": { "word": "100%" }, "to": { "wordEnd": "100%" } },
+    { "label": "invest in the Philippines", "from": { "word": "invest" }, "to": "end" }
+  ],
+  "outro": { "logo": "rtc-logo.png", "seconds": 3.2 }
+}
