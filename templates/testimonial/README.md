@@ -1,4 +1,4 @@
-# Testimonial template (landscape and portrait)
+﻿# Testimonial template (landscape and portrait)
 
 The saved editing style for No Money Down / RTC testimonials, from the first approved testimonial (2026-10-22).
 Same look in both shapes: set `"format": "landscape"` (1920x1080) or `"portrait"` (1080x1920) in
@@ -51,6 +51,26 @@ Same look in both shapes: set `"format": "landscape"` (1920x1080) or `"portrait"
   `"capStyle": "kinetic"` animates captions like the motion-text style (my-style-refs/motion-text-style.md): each
   word blurs in as it is spoken, connector words in italic serif, the rest bold sans, capKeywords in a red box.
   Needs assets/gsap.min.js (`npm run new-video` copies it).
+- **Motion graphics follow `my-style-refs/` (user rule 2026-11-23).** Before planning step 3, read
+  `my-style-refs/motion-text-style.md` and look at `my-style-refs/motion/` (R1 brand-red fluid, R2 serif + bold kinetic
+  type over the speaker, R3 clean white). The approved build of it is the approved motion reel
+  (`my-style-refs/motion/approved-motion-reel.mp4`). What that
+  means in this template:
+  - **Kinetic text leads:** use `kinetic` cards for the highlights, word by word on the voice: small *italic serif*
+    connectors, one big bold hero word, a red `[BOX]` on the key word (it wipes in left to right). Hero letters start
+    spread and blurred and snap together (R1 letter-spaced collapse); serif words blur in; boxes pop.
+  - **Full motion-text scenes:** `full: true` (red fluid gradient) and `theme: 'light'` (white flash scene) for the
+    strongest lines; run them long. Scenes of the same color back to back keep the background and only the words change.
+  - **Transitions = the reel's:** the scene color sweeps up from the bottom as a wave with a moving wavy edge and lifts off
+    upward back to the footage; a scene of the other color waves up over the last. Words leave with the reel's exits in turn:
+    zoom through (fly-through), slide away with blur, squash, shrink. No iris or soft dissolve (rejected 2026-11-23).
+  - **Over the speaker:** kinetic text in the lower-middle with a soft dark shade behind it (R2 talking-head style), and
+    no caption under a card or the name card.
+  - **Always moving:** a slow push-in on every card and scene, drifting background blobs, a new beat every 1-2 s.
+  - **Palette:** brand red #aa0000 + black/white only. End on the RTC logo.
+  - Not built into the template yet (add to a video's own composition when a line calls for it): R1 cursor click on a
+    word, stat block with a counting number on a white curve, R2 spotlight scene, cut-out object per idea (needs PNGs from
+    the user), check badges like the reel's "TIPS, FORMULA,".
 - **Brand red #aa0000:**
   - section pills at the top ("WHY SHE JOINED", ...)
   - the name card's edge

@@ -1,4 +1,4 @@
-// Testimonial template: builds index.html (landscape 1920x1080 or portrait 1080x1920) from cut.json word
+﻿// Testimonial template: builds index.html (landscape 1920x1080 or portrait 1080x1920) from cut.json word
 // timing + edl.json + testimonial.json, then applies any timeline-edits.json (left over from the removed
 // timeline editor; absent normally) and writes:
 //   index.html          the HyperFrames composition (output time)
@@ -309,7 +309,21 @@ if (!C.kineticCaptions) {
       if (after.length && c.end - z >= 0.3) parts.push({ text: after.map((w) => w.text).join(' '), start: z, end: c.end, words: after });
     }
     outCaps.splice(i, 1, ...parts);
+    i += parts.length; // check the kept parts again: a line can run under two cards back to back
   }
+}
+// "name": { ..., "hideCaptions": true }: no caption under the name card while she says her name (the card already says it)
+const nameCard = cards.find((c) => c.id === 'name' && !c.hidden);
+if (C.name?.hideCaptions && nameCard && STAGE !== 'subs') {
+  const [a, z] = [mapT(nameCard.start), mapT(nameCard.start + nameCard.duration)];
+  for (let i = outCaps.length - 1; i >= 0; i--) if (outCaps[i].start < z - 0.1 && outCaps[i].end > a + 0.1) outCaps.splice(i, 1);
+}
+// no caption flashes: a piece shorter than 0.4 s left between cards joins the next caption when they touch, or goes
+for (let i = outCaps.length - 1; i >= 0; i--) {
+  const c = outCaps[i], n = outCaps[i + 1];
+  if (c.end - c.start >= 0.4) continue;
+  if (n && n.start - c.end < 0.1) outCaps.splice(i, 2, { ...n, text: `${c.text} ${n.text}`, start: c.start, words: c.words && n.words ? [...c.words, ...n.words] : n.words });
+  else outCaps.splice(i, 1);
 }
 const outCards = cards
   .filter((c) => !c.hidden && STAGE !== 'subs')
@@ -433,16 +447,43 @@ const emphHtml = emphCards.map((c, k) => {
       // brand-red background (or white with "theme": "light") covers the footage; the words land on the voice, centered
       // in the safe zone. The voice keeps playing under it.
       const z = SAFE ?? { x: 60, y: 140, w: WW - 120, h: HH - 280 };
-      tweens.push(`tl.fromTo('#${c.id} .fbg',{opacity:0,scale:1.08},{opacity:1,scale:1,duration:.3,ease:'power3.out'},${f3(c.s - 0.1)});`,
-        ...[[240, -170, 1.15], [-280, -240, .9], [-200, 210, 1.2]].map(([x, y, sc], j) => `tl.fromTo('#${c.id} .fb${j + 1}',{x:0,y:0,scale:1},{x:${x},y:${y},scale:${sc},duration:${f3(c.d + 0.1)},ease:'sine.inOut'},${f3(c.s - 0.1)});`),
-        `tl.to('#${c.id} .in',{scale:1.05,duration:${f3(Math.max(0.3, c.d - 0.4))},ease:'none'},${f3(c.s)});`,
-        `tl.to('#${c.id} .in',{opacity:0,scale:1.6,filter:'blur(14px)',duration:.26,ease:'power2.in'},${f3(c.s + c.d - 0.34)});`,
-        `tl.to('#${c.id} .fbg',{opacity:0,duration:.22,ease:'power1.in'},${f3(c.s + c.d - 0.24)});`,
-        `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.05)});`, `tl.set('#${c.id} .fbg',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+      // back-to-back full scenes (user note 2026-11-23: longer full scenes, no face peeking between them): the first runs
+      // until the next starts and keeps its background up; the next starts with its background already up
+      const isFull = (o) => o?.id.startsWith('emph') && C.emphasis[Number(o.id.slice(4))]?.type === 'kinetic' && C.emphasis[Number(o.id.slice(4))]?.full;
+      const nxt = outCards.find((o) => o !== c && isFull(o) && o.s > c.s && o.s - (c.s + c.d) < 0.25);
+      const prv = outCards.find((o) => o !== c && isFull(o) && o.s < c.s && c.s - (o.s + o.d) < 0.25);
+      // transitions like the approved motion reel (my-style-refs/motion/approved-motion-reel.mp4, user note
+      // 2026-11-23: use it as the reference): the scene's color sweeps up from the bottom as a wave with a
+      // moving wavy edge, and at the end lifts off upward back onto the footage. Back-to-back scenes of the same color
+      // keep the background and only the words change; a scene of another color comes up as a new wave over the last.
+      // The words leave with one of the reel's exits in turn: zoom through, slide away, squash, shrink.
+      const theme = (o) => C.emphasis[Number(o.id.slice(4))]?.theme === 'light' ? 'light' : 'dark';
+      const sameBg = prv && theme(prv) === theme(c);
+      const textEnd = nxt ? nxt.s : c.s + c.d;
+      if (nxt) c.d = nxt.s - c.s + 0.6;
+      const WV = (y, a) => `path('M0 ${y} C 180 ${y - a}, 360 ${y + a}, 540 ${y} S 900 ${y - a}, 1080 ${y} L1080 2400 L0 2400 Z')`; // colour below a wavy edge
+      const LF = (y, a) => `path('M0 -400 L1080 -400 L1080 ${y} C 900 ${y + a}, 720 ${y - a}, 540 ${y} S 180 ${y + a}, 0 ${y} Z')`; // colour above a wavy edge
+      if (sameBg) tweens.push(`tl.set('#${c.id} .fbg',{opacity:1,clipPath:"${WV(-400, 0)}"},${f3(c.s)});`);
+      else tweens.push(`tl.fromTo('#${c.id} .fbg',{opacity:1,clipPath:"${WV(2080, 110)}"},{clipPath:"${WV(-360, -90)}",duration:.55,ease:'power3.inOut'},${f3(c.s - (prv ? 0 : 0.2))});`,
+        `tl.fromTo('#${c.id} .fwrap',{opacity:0},{opacity:1,duration:.15,ease:'power1.out'},${f3(c.s + (prv ? 0.3 : 0.15))});`); // words show once the wave is up
+      tweens.push(
+        ...[[240, -170, 1.15], [-280, -240, .9], [-200, 210, 1.2]].map(([x, y, sc], j) => `tl.fromTo('#${c.id} .fb${j + 1}',{x:0,y:0,scale:1},{x:${x},y:${y},scale:${sc},duration:${f3(c.d + 0.2)},ease:'sine.inOut'},${f3(c.s - 0.2)});`),
+        `tl.to('#${c.id} .in',{scale:1.05,duration:${f3(Math.max(0.3, textEnd - c.s - 0.4))},ease:'none'},${f3(c.s)});`);
+      const nFull = outCards.filter((o) => isFull(o) && o.s < c.s).length;
+      const out = [
+        `{scale:2.8,opacity:0,filter:'blur(16px)',duration:.3,ease:'power2.in'}`,
+        `{x:-700,opacity:0,filter:'blur(14px)',duration:.24,ease:'power2.in'}`,
+        `{scaleY:.02,scaleX:1.2,opacity:0,duration:.18,ease:'power2.in'}`,
+        `{scale:.3,opacity:0,duration:.2,ease:'power2.in'}`,
+      ][nFull % 4];
+      const tOut = textEnd - (nxt ? 0.32 : 0.62);
+      tweens.push(`tl.to('#${c.id} .in',${out},${f3(tOut)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(tOut + 0.31)});`);
+      if (!nxt) tweens.push(`tl.fromTo('#${c.id} .fbg',{clipPath:"${LF(2100, 100)}"},{clipPath:"${LF(-380, -90)}",duration:.42,ease:'power3.in'},${f3(c.s + c.d - 0.44)});`, `tl.set('#${c.id} .fbg',{opacity:0},${f3(c.s + c.d - 0.02)});`);
       return `<div id="${c.id}" ${clipAttrs(c, track, `clip kin-card kin-full ${e.theme === 'light' ? 'light' : 'dark'}`)}><div class="fbg"><i class="fb1"></i><i class="fb2"></i><i class="fb3"></i></div><div class="fwrap" style="left:${z.x}px;width:${z.w}px;top:${z.y}px;height:${z.h}px"><div class="in">${lines.join('')}</div></div></div>`;
     }
     tweens.push(`tl.fromTo('#${c.id} .ksh',{opacity:0},{opacity:1,duration:.3},${f3(c.s)});`,
-      `tl.to('#${c.id} .in',{opacity:0,y:-18,filter:'blur(8px)',duration:.25,ease:'power2.in'},${f3(c.s + c.d - 0.31)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.05)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+      `tl.to('#${c.id} .in',{opacity:0,y:-18,filter:'blur(8px)',duration:.3,ease:'power2.in'},${f3(c.s + c.d - 0.34)});`, `tl.to('#${c.id} .ksh',{opacity:0,duration:.3,ease:'power1.in'},${f3(c.s + c.d - 0.34)});`, `tl.set('#${c.id} .ksh',{opacity:0},${f3(c.s + c.d - 0.02)});`, // the shade fades with the words (it used to cut off)
+      `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.05)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.02)});`);
     return `<div id="${c.id}" ${clipAttrs(c, track, 'clip kin-card')} style="top:${Math.round(SAFE ? Math.max(SAFE.y + 20, Math.min(e.top ?? 1080, SAFE.y + SAFE.h - kh - 20, C.kineticCaptions && C.capTop ? C.capTop - kh - 24 : Infinity)) : e.top ?? (PORTRAIT ? 1080 : 620))}px${SAFE ? `;left:${SAFE.x}px;right:auto;width:${SAFE.w}px` : ''}"><div class="ksh"></div><div class="in">${lines.join('')}</div></div>`;
   }
   if (e.type === 'title') {
