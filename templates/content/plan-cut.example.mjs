@@ -87,6 +87,12 @@ const emphasis = [
   // hook: 2-3 kinetic cards on the opening line, the payoff as a full red scene, e.g.
   // { type: 'kinetic', from: 0, lines: ["*So, that's why in these*", '[3 SIMPLE=three]', 'STEPS'] },
   // { type: 'kinetic', from: { word: 'you', after: 2 }, start: 2.9, lines: ['*you can get to know*', 'HOW MUCH', '[LOAN]'], full: true, sfx: 'deepwhoosh' },
+  // motion-graphic B-roll: a full scene with art drawn above the words, e.g.
+  // { type: 'kinetic', from: { word: 'property' }, lines: ['*your first*', '[PROPERTY]'], full: true, art: { type: 'icon', name: 'house' } },
+  // { ..., art: { type: 'count', to: 1040000, prefix: 'RM', at: { word: 'rm1040000' } } }   // counts up as it is said
+  // { ..., art: { type: 'chart' } }   // rising bars + arrow
+  // { ..., art: { type: 'checklist', items: [{ text: 'Net income', at: { word: 'net' } }, ...] } }
+  // icons: house, key, money, chart, calendar, target, bulb, people, check, phone
   // each step / key idea: a kinetic card (STEP words as the hero, the key word boxed); the strongest lines as long
   // full scenes (back-to-back full scenes of one color keep the background; use theme: 'light' for contrast)
 ];
@@ -95,6 +101,13 @@ const emphasis = [
 const splits = [
   // { from: anchor, to: anchor, tag: 'STEP 1', title: 'Net income x 70%', chart: { type: 'stats', items: [
   //   { label: 'NET INCOME', display: 'RM10,000', at: { word: 'rm10000' } }, { label: 'x 70% DSR', display: 'RM7,000', gold: true, at: { word: '70' } } ] } },
+];
+// B-roll (user note 2026-11-24). Clips: the user's own (inbox clips they call B-roll) or free stock from tools/stock.mjs,
+// saved in assets/broll/; run node prep-broll.mjs after editing this list. mode 'full' cuts away (wave in, lift off),
+// 'frame' keeps the speaker and shows the clip in a window between the face and the captions. Images (.jpg/.png) work too.
+const broll = [
+  // { from: { word: 'property' }, to: { word: 'investor' }, file: 'broll/house.mp4', clipStart: 2 },
+  // { from: { word: 'workshop' }, seconds: 3, file: 'broll/event.jpg', mode: 'frame' },
 ];
 const zooms = []; // a push-in (1.10) on a key line or two that no card covers
 const outro = null; // { logo: 'rtc-logo.png', seconds: 3.2 } for RTC content; client content has no logo end screen
@@ -121,6 +134,6 @@ const extraSfx = [
 ];
 
 writeFileSync('content.json', JSON.stringify({ format: 'portrait', title: 'FILL - content', noisyRoom: false, reframe, centerNudge,
-  silenceDb, sections, fillers, wordFixes, capTop, capKeywords, safe, keepColor, look, hook, name, pills, emphasis, splits, zooms, outro,
+  silenceDb, sections, fillers, broll, wordFixes, capTop, capKeywords, safe, keepColor, look, hook, name, pills, emphasis, splits, zooms, outro,
   music, musicEven, bedGain, sfxTrim, sounds, extraSfx }, null, 2));
 console.log(JSON.stringify(sections.map((s) => s.slice(0, 3))), `${fillers.length} cuts`);

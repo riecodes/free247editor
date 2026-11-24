@@ -40,6 +40,21 @@ hindi nalilito"): its own scripts (cut, framing, captions, motion graphics, musi
     that count up, or stat rows that slide in as each number is said (RM10,000 → x 70% → RM7,000).
   - One CTA pill on the call to action. `look: 'premium'`.
   - Name card only when the speaker introduces himself.
+- **B-roll (user note 2026-11-24: "clip plus motion B-roll, pati free stock"):** cut away from the speaker where a
+  picture says it better, while the voice keeps going.
+  - **Clips** (`broll` in `plan-cut.mjs`): the user's own footage (inbox clips they call B-roll) or free stock, saved in
+    `assets/broll/`. `mode: 'full'` cuts away full screen with the reel's wave in, a slow push-in and the lift-off out;
+    `mode: 'frame'` keeps the speaker and shows the clip in a framed window between the face and the captions. Images
+    (.jpg/.png) work the same way. Run `node prep-broll.mjs` after editing the list (light H.264 copies, already cropped).
+  - **Motion-graphic B-roll** (`art` on a full kinetic scene, free, no footage needed): an `icon` that draws on (house,
+    key, money, chart, calendar, target, bulb, people, check, phone), a `count` that counts up to an amount as it is said
+    (RM1,040,000), a rising `chart`, or a `checklist` that ticks each step as it is said.
+  - **Free stock** (`tools/stock.mjs`, Pexels and Pixabay, free to use): `node tools/stock.mjs search "house keys"
+    --orientation portrait` lists clips (id, seconds, size, source page); `node tools/stock.mjs get pexels:<id> --out
+    <P>/assets/broll/house.mp4` downloads one and logs its credits in `broll/broll-credits.json`. Needs a free
+    `PEXELS_API_KEY` and/or `PIXABAY_API_KEY` in `.env` (never in chat). Show the user each clip (name, source page,
+    size) and get an okay before downloading it.
+  - Keep B-roll short (2-4 s), on the words it shows, and out of split windows and full text scenes. Captions stay on.
 - **Sound:** voice cleanup; SFX on every card and scene (deep whoosh on full scenes, box pops, cha-ching / money on
   amounts, riser into the CTA); a chill, upbeat bed (lo-fi / jazzy like "Dawn - Cushy", never sad) heard from the start,
   about 20 dB under the voice; -14 LUFS.
@@ -61,6 +76,7 @@ when asked), then the step files go to the Recycle Bin. Notes come in the chat (
    - copy the inbox video to `<P>/assets/raw.mp4`
    - copy every file in `templates/content/` except this README into `<P>/assets/`, then rename
      `plan-cut.example.mjs` to `plan-cut.mjs`
+   - B-roll clips or photos go in `<P>/assets/broll/` (from the inbox, or `tools/stock.mjs get`)
    - RTC content only: copy `my-style-refs/rtc-logo.png` to `<P>/assets/`
 2. Transcribe twice:
    - `node tools/transcribe.mjs <P>/assets/raw.mp4` (writes raw.json; add `--prompt` with a Taglish line for Taglish speech)
@@ -70,7 +86,8 @@ when asked), then the step files go to the Recycle Bin. Notes come in the chat (
    Re-transcribe `cut.mp4` (cut.json + cut-fillers.json) and check every join on its own. **Stop for the okay.**
 4. Step 2: `wordFixes` and `capTop`, `node build-comp.mjs --stage=subs`, `node mix-audio.mjs --voice-only`, lint, draft
    render. **Stop.**
-5. Step 3: the graphics part of `plan-cut.mjs` (anchors on cut.json words), `node build-comp.mjs --stage=graphics`,
+5. Step 3: the graphics part of `plan-cut.mjs` (anchors on cut.json words, B-roll included), `node prep-broll.mjs`,
+   `node build-comp.mjs --stage=graphics`,
    lint, draft render, check each card, panel, scene handoff and the ending. **Stop.**
 6. Step 4: `node build-comp.mjs`, `node prep-music.mjs`, `BED_STEM=../review/bed-ducked.wav node mix-audio.mjs`; measure
    the bed gap per part (about 20 dB), render, check -14 LUFS. **Stop.**
@@ -86,5 +103,6 @@ when asked), then the step files go to the Recycle Bin. Notes come in the chat (
 | `track-face.py` | per-piece crop centered on the speaker (`reframe: 'smooth'` follows slowly, `centerNudge`) → `crop-geom.json` |
 | `render-cut.mjs` | one-pass cut, reframe, voice cleanup → `cut.mp4`, `voice.wav` |
 | `build-comp.mjs` | captions, kinetic cards, full scenes and transitions, data panels, zooms, end screen → `index.html`, `sfx-cues.json` |
+| `prep-broll.mjs` | light H.264 copies of the B-roll clips, cropped to the frame they fill → `broll/_prep/` |
 | `prep-music.mjs` | music bed from `my-sounds` → `bed-music.wav` |
 | `mix-audio.mjs` | voice + SFX + ducked bed → `mix.wav` |

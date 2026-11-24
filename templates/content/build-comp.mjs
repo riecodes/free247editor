@@ -211,6 +211,15 @@ if (C.name) {
   cardsDef.push({ id: `split${i}`, label: `Split: ${p.title}`, start: s, duration: Math.max(3, e - s) });
   sfxDef.push({ t: s, k: 'whoosh', gain: -18 }, { t: e - 0.75, k: 'whoosh2', gain: -20, splitOut: true });
 });
+// "broll": [{ from: anchor, to?: anchor, seconds?, file: 'broll/house.mp4' (or .jpg/.png), clipStart?, mode?: 'full' | 'frame',
+// fit?: 'cover' | 'contain', sfx? }]: the user's own clips or free stock (tools/stock.mjs) over the voice (user note 2026-11-24:
+// "clip plus motion B-roll, pati free stock"). 'full' cuts away to the clip full screen with the reel's wave in and lift-off out
+// and a slow push-in; 'frame' keeps the speaker and shows the clip in a framed window above the captions.
+(C.broll ?? []).forEach((b, i) => {
+  const s = at(b.from) + (b.offset ?? -0.1), e = b.to != null ? at(b.to) + 0.2 : s + (b.seconds ?? 3);
+  cardsDef.push({ id: `broll${i}`, label: `B-roll: ${b.file}`, start: s, duration: Math.max(1.2, e - s) });
+  sfxDef.push({ t: s, k: b.sfx ?? 'whoosh3', gain: -20 });
+});
 // "extraSfx": [{ at: anchor, k, gain?, offset?, len?, pre? }]: sounds on a word (user note 2026-11-23: "gamitin mo lahat ng pwedeng
 // ilagay ... sound effects"). "pre" starts the file that many seconds before the word (a riser that peaks on it), "len"
 // lets a longer sound play past the 2.5 s default.
@@ -404,6 +413,52 @@ const SAFE = C.safe ?? null;
 // user note (2026-11-19): only the text has to sit in the safe zone; cards and panels keep their own layout
 const SAFE_CARDS = SAFE && C.safeCards ? SAFE : null;
 const EMPH_W = SAFE_CARDS ? SAFE_CARDS.w : PORTRAIT ? 900 : 540, EMPH_IN = EMPH_W - 60;
+// motion-graphic B-roll (user note 2026-11-24): a full kinetic scene can carry "art", drawn above its words in the
+// my-style-refs look. { type: 'icon', name: house|key|money|chart|calendar|target|bulb|people|check|phone } draws on;
+// { type: 'count', to, from?, prefix?, suffix?, at?, seconds? } counts up; { type: 'chart' } grows rising bars with an
+// arrow; { type: 'checklist', items: [{ text, at }] } ticks each item as it is said. Anchors ("at") are cut.json words.
+const ICONS = {
+  house: 'M20 58 L60 24 L100 58 M32 50 V98 H88 V50 M52 98 V72 H68 V98',
+  key: 'M26 60 a18 18 0 1 0 36 0 a18 18 0 1 0 -36 0 M62 60 H102 M88 60 V74 M100 60 V70',
+  money: 'M14 34 H106 V86 H14 Z M48 60 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0 M28 46 V74 M92 46 V74',
+  chart: 'M18 18 V102 H104 M28 86 L50 64 L66 74 L96 38 M80 38 H96 V54',
+  calendar: 'M20 30 H100 V100 H20 Z M20 48 H100 M40 20 V38 M80 20 V38 M40 66 H50 M66 66 H76 M40 82 H50',
+  target: 'M20 60 a40 40 0 1 0 80 0 a40 40 0 1 0 -80 0 M36 60 a24 24 0 1 0 48 0 a24 24 0 1 0 -48 0 M60 60 L100 20 M86 20 H100 V34',
+  bulb: 'M60 18 a30 30 0 0 0 -18 54 V84 H78 V72 a30 30 0 0 0 -18 -54 M46 94 H74 M50 104 H70',
+  people: 'M28 50 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0 M18 98 a24 24 0 0 1 48 0 M71 46 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0 M70 96 a20 20 0 0 1 36 -4',
+  check: 'M16 60 a44 44 0 1 0 88 0 a44 44 0 1 0 -88 0 M38 62 L54 78 L84 46',
+  phone: 'M40 14 H80 a8 8 0 0 1 8 8 V98 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V22 a8 8 0 0 1 8 -8 Z M52 94 H68',
+};
+const artHtml = (c, e) => {
+  const a = e.art, id = `${c.id}a`, t0 = c.s + 0.3, tA = (x) => (x != null ? mapT(at(x)) : t0);
+  if (a.type === 'icon') {
+    if (!ICONS[a.name]) throw new Error(`unknown art icon "${a.name}" (${Object.keys(ICONS).join(', ')})`);
+    tweens.push(`tl.fromTo('#${id}',{opacity:0,scale:.7,rotation:-8},{opacity:1,scale:1,rotation:0,duration:.45,ease:'back.out(2)'},${f3(t0)});`,
+      `tl.fromTo('#${id} path',{strokeDasharray:420,strokeDashoffset:420},{strokeDashoffset:0,duration:.85,ease:'power2.out'},${f3(t0 + 0.05)});`,
+      `tl.to('#${id}',{y:-12,duration:${f3(Math.max(0.6, c.d - 0.6))},ease:'sine.inOut'},${f3(t0 + 0.5)});`);
+    return `<svg id="${id}" class="art icon" viewBox="0 0 120 120"><path d="${ICONS[a.name]}"/></svg>`;
+  }
+  if (a.type === 'count') {
+    const from = a.from ?? 0, s = tA(a.at), d = a.seconds ?? 1.3;
+    tweens.push(`tl.fromTo('#${id}',{opacity:0,scale:.6},{opacity:1,scale:1,duration:.4,ease:'back.out(2)'},${f3(s - 0.1)});`,
+      `(()=>{const o={v:${from}},el=document.querySelector('#${id} .n');tl.fromTo(o,{v:${from}},{v:${a.to},duration:${d},ease:'power2.out',onUpdate:()=>{el.textContent=Math.round(o.v).toLocaleString('en-US');}},${f3(s)});})();`);
+    return `<div id="${id}" class="art count">${esc(a.prefix ?? '')}<span class="n">${from.toLocaleString('en-US')}</span>${esc(a.suffix ?? '')}</div>`;
+  }
+  if (a.type === 'chart') {
+    tweens.push(`tl.fromTo('#${id} .cb',{scaleY:0},{scaleY:1,duration:.5,ease:'power3.out',stagger:.12},${f3(t0)});`,
+      `tl.fromTo('#${id} path',{strokeDasharray:400,strokeDashoffset:400},{strokeDashoffset:0,duration:.7,ease:'power2.inOut'},${f3(t0 + 0.45)});`);
+    return `<div id="${id}" class="art chart">${[34, 52, 72, 100].map((h) => `<i class="cb" style="height:${h}%"></i>`).join('')}<svg viewBox="0 0 400 260" preserveAspectRatio="none"><path d="M10 230 L120 170 L220 190 L380 40 M330 40 H380 V90"/></svg></div>`;
+  }
+  if (a.type === 'checklist') {
+    a.items.forEach((it, j) => {
+      const s = tA(it.at);
+      tweens.push(`tl.fromTo('#${id}i${j}',{opacity:0,x:-40,filter:'blur(8px)'},{opacity:1,x:0,filter:'blur(0px)',duration:.35,ease:'power3.out'},${f3(s - 0.05)});`,
+        `tl.fromTo('#${id}i${j} .ck',{scale:0},{scale:1,duration:.3,ease:'back.out(2.5)'},${f3(s + 0.15)});`);
+    });
+    return `<div id="${id}" class="art checklist">${a.items.map((it, j) => `<div id="${id}i${j}" class="ci"><span class="ck">✓</span>${esc(it.text)}</div>`).join('')}</div>`;
+  }
+  throw new Error(`unknown art type "${a.type}" (icon, count, chart, checklist)`);
+};
 const emphHtml = emphCards.map((c, k) => {
   const e = C.emphasis[Number(c.id.slice(4))];
   const track = 30 + k;
@@ -479,7 +534,7 @@ const emphHtml = emphCards.map((c, k) => {
       const tOut = textEnd - (nxt ? 0.32 : 0.62);
       tweens.push(`tl.to('#${c.id} .in',${out},${f3(tOut)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(tOut + 0.31)});`);
       if (!nxt) tweens.push(`tl.fromTo('#${c.id} .fbg',{clipPath:"${LF(2100, 100)}"},{clipPath:"${LF(-380, -90)}",duration:.42,ease:'power3.in'},${f3(c.s + c.d - 0.44)});`, `tl.set('#${c.id} .fbg',{opacity:0},${f3(c.s + c.d - 0.02)});`);
-      return `<div id="${c.id}" ${clipAttrs(c, track, `clip kin-card kin-full ${e.theme === 'light' ? 'light' : 'dark'}`)}><div class="fbg"><i class="fb1"></i><i class="fb2"></i><i class="fb3"></i></div><div class="fwrap" style="left:${z.x}px;width:${z.w}px;top:${z.y}px;height:${z.h}px"><div class="in">${lines.join('')}</div></div></div>`;
+      return `<div id="${c.id}" ${clipAttrs(c, track, `clip kin-card kin-full ${e.theme === 'light' ? 'light' : 'dark'}`)}><div class="fbg"><i class="fb1"></i><i class="fb2"></i><i class="fb3"></i></div><div class="fwrap" style="left:${z.x}px;width:${z.w}px;top:${z.y}px;height:${z.h}px"><div class="in">${e.art ? artHtml(c, e) : ''}${lines.join('')}</div></div></div>`;
     }
     tweens.push(`tl.fromTo('#${c.id} .ksh',{opacity:0},{opacity:1,duration:.3},${f3(c.s)});`,
       `tl.to('#${c.id} .in',{opacity:0,y:-18,filter:'blur(8px)',duration:.3,ease:'power2.in'},${f3(c.s + c.d - 0.34)});`, `tl.to('#${c.id} .ksh',{opacity:0,duration:.3,ease:'power1.in'},${f3(c.s + c.d - 0.34)});`, `tl.set('#${c.id} .ksh',{opacity:0},${f3(c.s + c.d - 0.02)});`, // the shade fades with the words (it used to cut off)
@@ -520,6 +575,39 @@ const SPL = PORTRAIT
     : { card: { x: 216, y: 730, k: 0.6 }, panel: 'left:70px;top:110px;width:940px', chartH: 170 }
   : { card: { x: 712, y: 250, k: 0.6 }, panel: 'left:64px;top:230px;width:600px', chartH: 260 };
 const SPL_W = Math.round(WW * SPL.card.k), SPL_H = Math.round(HH * SPL.card.k);
+// B-roll (see "broll" above). prep-broll.mjs makes a light H.264 copy of each clip in broll/_prep/, used when it exists.
+const brollCards = outCards.filter((c) => c.id.startsWith('broll'));
+const IMG = /\.(jpe?g|png|webp)$/i;
+const brollHtml = brollCards.map((c) => {
+  const i = Number(c.id.slice(5)), b = C.broll[i], full = (b.mode ?? 'full') === 'full';
+  const prepped = `broll/_prep/${b.file.split('/').pop().replace(/\.[^.]+$/, '')}.mp4`;
+  const src = !IMG.test(b.file) && existsSync(here(`./${prepped}`)) ? prepped : b.file;
+  const media = IMG.test(b.file)
+    ? `<img class="bm" src="assets/${esc(src)}" alt="">`
+    : `<video id="${c.id}v" class="bm" src="assets/${esc(src)}" data-start="${f3(c.s)}" data-duration="${f3(c.d)}" data-media-start="${f3(b.clipStart ?? 0)}" data-track-index="${70 + i}" muted playsinline></video>`;
+  const WVb = (y, a) => `path('M0 ${y} C 180 ${y - a}, 360 ${y + a}, 540 ${y} S 900 ${y - a}, 1080 ${y} L1080 2400 L0 2400 Z')`;
+  const LFb = (y, a) => `path('M0 -400 L1080 -400 L1080 ${y} C 900 ${y + a}, 720 ${y - a}, 540 ${y} S 180 ${y + a}, 0 ${y} Z')`;
+  if (full) {
+    tweens.push(`tl.fromTo('#${c.id}',{clipPath:"${WVb(HH + 160, 110)}"},{clipPath:"${WVb(-360, -90)}",duration:.55,ease:'power3.inOut'},${f3(c.s)});`,
+      `tl.fromTo('#${c.id} .bm',{scale:1.14},{scale:1.02,duration:${f3(c.d)},ease:'none'},${f3(c.s)});`,
+      `tl.fromTo('#${c.id}',{clipPath:"${LFb(HH + 180, 100)}"},{clipPath:"${LFb(-380, -90)}",duration:.42,ease:'power3.in'},${f3(c.s + c.d - 0.44)});`,
+      `tl.set('#${c.id}',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+  } else {
+    tweens.push(`tl.fromTo('#${c.id} .bf',{opacity:0,scale:.82,y:40,filter:'blur(10px)'},{opacity:1,scale:1,y:0,filter:'blur(0px)',duration:.45,ease:'power3.out'},${f3(c.s)});`,
+      `tl.fromTo('#${c.id} .bm',{scale:1.12},{scale:1,duration:${f3(c.d)},ease:'none'},${f3(c.s)});`,
+      `tl.to('#${c.id} .bf',{opacity:0,scale:.9,filter:'blur(8px)',duration:.3,ease:'power2.in'},${f3(c.s + c.d - 0.32)});`,
+      `tl.set('#${c.id} .bf',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+  }
+  const fit = b.fit ?? 'cover';
+  // a video clip is timed by its own <video> (a timed wrapper would freeze it), so its wrapper is shown and hidden by the
+  // timeline; an image sits in a timed div
+  const vid = !IMG.test(b.file);
+  const attrs = vid ? `id="${c.id}" class="broll ${full ? 'full' : 'frame'}" style="opacity:0"` : `id="${c.id}" ${clipAttrs(c, 50 + i, `clip broll ${full ? 'full' : 'frame'}`)}`;
+  if (vid) tweens.push(`tl.set('#${c.id}',{opacity:1},${f3(c.s)});`, `tl.set('#${c.id}',{opacity:0},${f3(c.s + c.d)});`);
+  return full
+    ? `<div ${attrs}><div class="bwrap" style="--fit:${fit}">${media}</div></div>`
+    : `<div ${attrs}><div class="bf"><div class="bwrap" style="--fit:${fit}">${media}</div></div></div>`;
+}).join('\n');
 const splitCards = outCards.filter((c) => c.id.startsWith('split'));
 const money = (n, like) => like.replace(/[\d,.]+/, Math.round(n).toLocaleString('en-US'));
 const splitHtml = splitCards.map((c) => {
@@ -715,6 +803,29 @@ const html = `<!doctype html>
 .kin-full.light .ks{color:#2a2a2a;text-shadow:none}.kin-full.light .kh{color:${RED};text-shadow:none}
 .kin-full.dark .kb .bx{background:#fff}.kin-full.dark .kb .tx{color:${RED}}
 .kin-card .kb .tx{position:relative;font-family:Poppins,Arial,sans-serif;font-weight:800;font-size:1.04em;letter-spacing:-.02em;color:#fff}
+.art{display:block;margin:0 auto 34px}
+.art.icon{width:300px;height:300px;fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 14px 34px rgba(0,0,0,.45))}
+.kin-full.light .art.icon{stroke:${RED};filter:none}
+.art.count{font-family:Poppins,Arial,sans-serif;font-weight:900;font-size:150px;letter-spacing:-4px;color:#fff;line-height:1;white-space:nowrap;text-shadow:0 14px 40px rgba(0,0,0,.45)}
+.kin-full.light .art.count{color:${RED};text-shadow:none}
+.art.chart{position:relative;width:560px;height:320px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px;box-sizing:border-box}
+.art.chart .cb{display:block;width:90px;background:rgba(255,255,255,.9);border-radius:14px 14px 4px 4px;transform-origin:50% 100%}
+.kin-full.light .art.chart .cb{background:${RED}}
+.art.chart svg{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#f3c35b;stroke-width:10;stroke-linecap:round;stroke-linejoin:round}
+.art.checklist{display:flex;flex-direction:column;align-items:flex-start;gap:22px;font-family:Poppins,Arial,sans-serif;font-weight:800;font-size:54px;color:#fff;text-align:left}
+.kin-full.light .art.checklist{color:#2a2a2a}
+.art.checklist .ci{display:flex;align-items:center;gap:22px;opacity:0;white-space:nowrap}
+.art.checklist .ck{display:inline-flex;align-items:center;justify-content:center;width:70px;height:70px;border-radius:50%;background:${RED};color:#fff;font-size:44px}
+.kin-full.dark .art.checklist .ck{background:#fff;color:${RED}}
+.broll{position:absolute;inset:0;pointer-events:none}
+.broll.full{z-index:14;overflow:hidden;background:#000}
+.broll .bwrap{position:absolute;inset:0;overflow:hidden}
+.broll .bm{width:100%;height:100%;object-fit:var(--fit,cover);display:block;transform-origin:50% 50%}
+.broll.frame{z-index:16}
+/* the window sits between the speaker's face and the caption line, so both stay visible */
+.broll .bf{position:absolute;left:${SAFE ? SAFE.x : 90}px;width:${SAFE ? SAFE.w : WW - 180}px;top:${(C.capTop ?? L.capTop) - 46 - Math.round((SAFE ? SAFE.w : WW - 180) * 9 / 16)}px;height:${Math.round((SAFE ? SAFE.w : WW - 180) * 9 / 16)}px;
+  border-radius:28px;overflow:hidden;border:6px solid #fff;box-shadow:0 0 0 3px ${RED},0 26px 70px rgba(0,0,0,.6);opacity:0}
+.broll .bf .bwrap{border-radius:22px}
 #outro{position:absolute;inset:0;z-index:40;opacity:0;background:radial-gradient(ellipse at center,#1f1f23 0%,#0d0d0f 70%)}
 #outro .in{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 #outro img{width:${L.logo}px;height:${L.logo}px;object-fit:contain}
@@ -724,6 +835,7 @@ ${PREMIUM ? PREMIUM_CSS : ''}
 ${splitCards.length ? `<div id="bgv"><video id="footage-bg" src="assets/${video}" data-start="0" data-duration="${DUR}" data-track-index="2" muted playsinline></video></div>` : ''}
 <div id="vframe"><div id="vwrap"><video id="footage" src="assets/${video}" data-start="0" data-duration="${DUR}" data-track-index="0" muted playsinline></video></div></div>
 ${splitHtml}
+${brollHtml}
 <audio id="mix" src="assets/mix.wav" data-start="0" data-duration="${TOTAL}" data-track-index="1" data-volume="1"></audio>
 ${H ? `<div id="hook" ${clipAttrs(H, 3)}><div class="in"><div class="q">${esc(C.hook.q)}</div><div class="big">${C.hook.big.split('\n').map(esc).join('<br>')}</div>${C.hook.sub ? `<div class="sub">${esc(C.hook.sub)}</div>` : ''}</div></div>` : ''}
 ${N ? `<div id="name" ${clipAttrs(N, 4)}><div class="in"><div class="n">${esc(C.name.name)}</div><div class="r">${esc(C.name.role)}</div></div></div>` : ''}
