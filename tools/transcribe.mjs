@@ -15,11 +15,17 @@ import { parseArgs } from 'node:util';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { values: opts, positionals: [video] } = parseArgs({
   allowPositionals: true,
-  options: { local: { type: 'boolean' }, model: { type: 'string', default: 'large-v3' } },
+  options: {
+    local: { type: 'boolean' }, model: { type: 'string', default: 'large-v3' },
+    // --prompt biases Groq's Whisper, e.g. a disfluent prompt ("Um, uh, so, um...") makes it keep fillers
+    prompt: { type: 'string' }, out: { type: 'string' },
+    // --language (ISO-639-1, e.g. en) stops Whisper from guessing a language and translating into it
+    language: { type: 'string' },
+  },
 });
-const { local, model } = opts;
+const { local, model, prompt } = opts;
 if (!video || !existsSync(video)) {
-  console.error('Usage: node tools/transcribe.mjs <video> [--local] [--model large-v3]');
+  console.error('Usage: node tools/transcribe.mjs <video> [--local] [--model large-v3] [--prompt <text>] [--language en] [--out <json>]');
   process.exit(1);
 }
 try { process.loadEnvFile(join(root, '.env')); } catch {}
@@ -31,7 +37,7 @@ const run = (cmd, cmdArgs) => {
 };
 
 const { dir, name } = parse(resolve(video));
-const out = join(dir, `${name}.json`);
+const out = opts.out ? resolve(opts.out) : join(dir, `${name}.json`);
 const duration = Number(run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', video]));
 
 let words;
@@ -51,6 +57,8 @@ if (local) {
   form.append('file', new Blob([readFileSync(audio)]), 'audio.mp3');
   form.append('model', 'whisper-large-v3');
   form.append('response_format', 'verbose_json');
+  if (prompt) form.append('prompt', prompt);
+  if (opts.language) form.append('language', opts.language);
   form.append('timestamp_granularities[]', 'word');
   const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST',
