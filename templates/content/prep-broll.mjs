@@ -11,7 +11,7 @@ const [WW, HH] = PORTRAIT ? [1080, 1920] : [1920, 1080];
 const SAFE = PORTRAIT ? C.safe : null;
 mkdirSync('broll/_prep', { recursive: true });
 for (const b of C.broll ?? []) {
-  if (/\.(jpe?g|png|webp)$/i.test(b.file)) continue;
+  if (!b.file || /\.(jpe?g|png|webp)$/i.test(b.file)) continue; // motion-graphic B-roll (art) and images need no prep
   if (!existsSync(b.file)) { console.error(`missing B-roll file: assets/${b.file}`); process.exitCode = 1; continue; }
   const out = `broll/_prep/${b.file.split('/').pop().replace(/\.[^.]+$/, '')}.mp4`;
   if (existsSync(out) && statSync(out).mtimeMs > statSync(b.file).mtimeMs) { console.log(`${out} (up to date)`); continue; }

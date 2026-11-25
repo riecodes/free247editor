@@ -1,4 +1,4 @@
-# Content template (tips, explainers, "3 simple steps", ads with one CTA)
+﻿# Content template (tips, explainers, "3 simple steps", ads with one CTA)
 
 The saved editing style for content videos: one speaker teaching or selling straight to camera (often at a whiteboard),
 usually one long take. Built from the approved content edits (2026-11-18/19) and the motion style the user
@@ -22,7 +22,9 @@ hindi nalilito"): its own scripts (cut, framing, captions, motion graphics, musi
   moving median, never jittery). `centerNudge` fixes a stretch where a turned head throws the centering off.
 - **Captions:** Poppins Bold, one line, raised (`capTop`), inside the social safe zone. Numbers as written on screen:
   RM/₱/$ amounts with commas, "70%" (`wordFixes`; check every number against what he says). No caption under a
-  kinetic card or the name card.
+  kinetic card or the name card. Brand caption style `capStyle: 'karaoke'` (with `capPunct: true` and `capTop` on the
+  chest): white Poppins Bold, 2-3 words, and a rounded gold highlight behind each word while it is said (a personal brand's
+  style, from her posted videos).
 - **Motion graphics follow `my-style-refs/` (read `my-style-refs/motion-text-style.md` and look at `my-style-refs/motion/`,
   including the approved motion reel `approved-motion-reel.mp4`, before planning step 3):**
   - Kinetic text leads: word by word on the voice, small *italic serif* connectors, one big bold hero word, the key word
@@ -91,7 +93,7 @@ when asked), then the step files go to the Recycle Bin. Notes come in the chat (
    lint, draft render, check each card, panel, scene handoff and the ending. **Stop.**
 6. Step 4: `node build-comp.mjs`, `node prep-music.mjs`, `BED_STEM=../review/bed-ducked.wav node mix-audio.mjs`; measure
    the bed gap per part (about 20 dB), render, check -14 LUFS. **Stop.**
-7. Step 5: `npx hyperframes render --quality high --output renders/final.mp4`, final checks, copy to
+7. Step 5: `npx hyperframes render --quality high --sdr --output renders/final.mp4` (always `--sdr`: iPhone HDR footage otherwise sends the render down the slow HDR path, 7x slower), final checks, copy to
    `outbox/<slug>-final.mp4`, step files to the Recycle Bin.
 
 ## Files
@@ -104,5 +106,6 @@ when asked), then the step files go to the Recycle Bin. Notes come in the chat (
 | `render-cut.mjs` | one-pass cut, reframe, voice cleanup → `cut.mp4`, `voice.wav` |
 | `build-comp.mjs` | captions, kinetic cards, full scenes and transitions, data panels, zooms, end screen → `index.html`, `sfx-cues.json` |
 | `prep-broll.mjs` | light H.264 copies of the B-roll clips, cropped to the frame they fill → `broll/_prep/` |
+| `textSfx: true` in the plan | a sound on every text that appears (pluck per line, deep hit on big words, fast whoosh out of a scene); pair with `music: false` for an SFX-only mix |
 | `prep-music.mjs` | music bed from `my-sounds` → `bed-music.wav` |
 | `mix-audio.mjs` | voice + SFX + ducked bed → `mix.wav` |

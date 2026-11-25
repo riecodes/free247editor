@@ -24,7 +24,11 @@ const edl = JSON.parse(readFileSync(here('./edl.json')));
 const FPS = edl.fps, BASE = +(edl.totalFrames / FPS).toFixed(3);
 const PORTRAIT = C.format === 'portrait';
 const [WW, HH] = PORTRAIT ? [1080, 1920] : [1920, 1080];
-const RED = '#aa0000'; // brand color (my-style.md)
+// "brand": { color, scene: [base, deep, blob1, blob2, blob3], light: blob } recolors boxes and full scenes for a client's
+// brand (user note 2026-11-24, a personal brand: gold like the speaker's caption highlight); default RTC brand red #aa0000 (my-style.md)
+const BR = C.brand ?? {};
+const RED = BR.color ?? '#aa0000';
+const SC = BR.scene ?? ['#3a0000', '#0d0000', '#c00010', '#7a0008', '#e0102a'];
 const E = existsSync(here('./timeline-edits.json')) ? JSON.parse(readFileSync(here('./timeline-edits.json'))) : {};
 
 // ---------- anchors: config times are resolved against the cut transcript ----------
@@ -107,10 +111,12 @@ chunks.forEach((c, i) => {
   const nextStart = chunks[i + 1] ? Math.max(0, chunks[i + 1][0].start - 2 / FPS) : BASE;
   const lastEnd = c[c.length - 1].end;
   const end = Math.min(nextStart, nextStart - lastEnd < 0.6 ? nextStart : lastEnd + 0.25, BASE);
-  const text = c.map((w) => clean(w.text).replace(/[,.?!]+$/, '').replace(/\.\.\.$/, '')).join(' ').replace(/no money down/gi, 'No Money Down');
+  // "capPunct": true keeps the commas, periods and question marks (a speaker whose captions show them)
+  const strip = (x) => (C.capPunct ? x.replace(/\.\.\.$/, '') : x.replace(/[,.?!]+$/, '').replace(/\.\.\.$/, ''));
+  const text = c.map((w) => strip(clean(w.text))).join(' ').replace(/no money down/gi, 'No Money Down');
   // per-word times for capStyle "kinetic" (a fixed word like "RM2,000 per" splits into tokens sharing its time)
   const toks = text.split(' ');
-  const times = c.flatMap((w) => clean(w.text).replace(/[,.?!]+$/, '').replace(/\.\.\.$/, '').split(' ').map(() => +w.start.toFixed(3)));
+  const times = c.flatMap((w) => strip(clean(w.text)).split(' ').map(() => +w.start.toFixed(3)));
   defaultCaps.push({ start: +start.toFixed(3), end: +end.toFixed(3), text, words: toks.length === times.length ? toks.map((x, k) => ({ text: x, t: times[k] })) : null });
 });
 
@@ -125,6 +131,9 @@ const SFX = {
   rip: 'Paper SFX (Free Sound Pack)- by MrJustinEdits/Newspaper Rip 4.wav',
   page: 'Paper SFX (Free Sound Pack)- by MrJustinEdits/Newspaper Page Turn 4.wav',
   pop: 'Overused SFX by Creators/Pop 1.wav',
+  pluck: 'Epedemic SFX/Click, Select, Soft Round Pluck, Short, Reverb.mp3',
+  deephit: 'Overused SFX by Creators/Deep Hit.wav',
+  fastwhoosh: 'Overused SFX by Creators/Fast Whoosh.wav',
   ding: 'Overused SFX by Creators/Bell Ding Sound Effect.wav',
   // "sounds": { name: 'pack/file' } in content.json adds any file from my-sounds under a short name
   ...(C.sounds ?? {}),
@@ -149,6 +158,23 @@ if (C.name) {
     cardsDef.push({ id, label: `${e.struck} struck: ${e.replace}`, start: s, duration: end - s });
     inner[id] = { strike: st - s, reveal: rv - s };
     sfxDef.push({ t: s, k: 'page', gain: -16 }, { t: st, k: 'rip', gain: -14 }, { t: rv, k: 'pop', gain: -16 });
+  } else if (e.type === 'overlay') {
+    // plain text over the footage, no box (a speaker's own editing style, user note 2026-11-24 "mag-base ka dun sa video
+    // na sinend ko"): lines that land as they are said, e.g. "Stop saying" small white + "I can't" big gold italic,
+    // or a small / BIG / small stack ("no / money / to start"). { lines: [{ text, at, style }], top, align, until|hold }
+    const ts = e.lines.map((l) => at(l.at ?? e.from) - 0.06);
+    const s0 = Math.min(...ts);
+    const end = e.until != null ? at(e.until) : Math.max(...ts) + (e.hold ?? 1.3);
+    cardsDef.push({ id, label: 'Text: ' + e.lines.map((l) => l.text).join(' / '), start: s0, duration: Math.max(0.8, end - s0) });
+    inner[id] = { lines: ts.map((t) => t - s0) };
+    // every sound hits when its text lands on screen (user note 2026-11-25 "i-timing mo lahat ng mga sound effects sa
+    // paglabas ng mga text"): mix-audio lines up each sound's loudest moment with the cue, and the cue is the moment the
+    // animation lands (lines rise in over ~0.1 s, a big word settles from its ghost at ~0.18 s)
+    const LAND = (st) => (['big', 'gold'].includes(st) ? 0.18 : 0.1);
+    if (e.sfx !== false) sfxDef.push({ t: s0 + LAND(e.lines[ts.indexOf(s0)]?.style), k: e.sfx ?? 'pop', gain: e.gain ?? -22 });
+    // "textSfx" (user note 2026-11-25 "puro sound effects kada litaw ng mga text"): every later line lands with a sound too,
+    // a soft pluck for small lines and a deep hit for the big / gold word
+    if (C.textSfx && e.sfx !== false) ts.forEach((t, j) => { if (t - s0 > 0.2) sfxDef.push(['big', 'gold'].includes(e.lines[j].style) ? { t: t + LAND('big'), k: 'deephit', gain: -21 } : { t: t + LAND(), k: 'pluck', gain: -22 }); });
   } else if (e.type === 'stack') {
     // lines that land one by one as they are said: [{ text, at, style: "gold" | "dim" | "white" }]
     const ts = e.lines.map((l) => at(l.at) - 0.08);
@@ -188,8 +214,21 @@ if (C.name) {
     const end = Math.max(e.until != null ? at(e.until) : toks[toks.length - 1].t + (e.hold ?? 1.1), toks[toks.length - 1].t + 1.05);
     cardsDef.push({ id, label: 'Kinetic: ' + e.lines.join(' / ').replace(/[*[\]~]/g, ''), start: s0, duration: end - s0 });
     inner[id] = { toks: toks.map((k, j) => ({ ...k, t: Math.max(0.04 * Math.min(j, 3), k.t - s0) })) };
-    sfxDef.push({ t: s0, k: e.sfx ?? 'whoosh3', gain: -20 });
-    toks.filter((k) => k.kind === 'box').forEach((k) => sfxDef.push({ t: k.t, k: e.boxSfx ?? 'pop', gain: e.boxGain ?? -17 }));
+    // a full scene's whoosh peaks halfway through its iris (from the footage it opens 0.36 s early; after another scene, 0.12 s)
+    const chained = e.full && cardsDef.some((d) => d.full && Math.abs(d.start + d.duration - s0) < 0.25);
+    cardsDef[cardsDef.length - 1].full = !!e.full;
+    sfxDef.push({ t: s0 + (e.full ? (chained ? 0.3 : 0.06) : 0.08), k: e.sfx ?? 'whoosh3', gain: -20 });
+    // a box hits as it is half open and its word slides in; serif words rise in ~0.08 s, bold words ~0.1 s
+    toks.filter((k) => k.kind === 'box').forEach((k) => sfxDef.push({ t: k.t + 0.15, k: e.boxSfx ?? 'pop', gain: e.boxGain ?? -17 }));
+    if (C.textSfx) {
+      // each new line lands with a soft pluck, each big bold word with a deep hit; a full scene leaves with a fast whoosh
+      // (dropped when another scene follows within 1.2 s)
+      toks.forEach((k, j) => {
+        if (k.kind === 'hero') sfxDef.push({ t: k.t + 0.1, k: 'deephit', gain: -20 });
+        else if (k.kind === 'ser' && j > 0 && toks[j - 1].li !== k.li) sfxDef.push({ t: k.t + 0.08, k: 'pluck', gain: -22 });
+      });
+      if (e.full) sfxDef.push({ t: Math.max(end, toks[toks.length - 1].t + 1.72) - 0.4, k: 'fastwhoosh', gain: -21, splitOut: true });
+    }
   } else if (e.type === 'title') {
     // a headline revealed word by word, with a small gold label above it (catches more attention than a pill)
     cardsDef.push({ id, label: `${e.label ?? ''} ${e.text}`.trim(), start: s, duration: e.duration ?? 2.8 });
@@ -218,7 +257,7 @@ if (C.name) {
 (C.broll ?? []).forEach((b, i) => {
   const s = at(b.from) + (b.offset ?? -0.1), e = b.to != null ? at(b.to) + 0.2 : s + (b.seconds ?? 3);
   cardsDef.push({ id: `broll${i}`, label: `B-roll: ${b.file}`, start: s, duration: Math.max(1.2, e - s) });
-  sfxDef.push({ t: s, k: b.sfx ?? 'whoosh3', gain: -20 });
+  if (b.sfx !== false) sfxDef.push({ t: s, k: b.sfx ?? 'whoosh3', gain: -20 });
 });
 // "extraSfx": [{ at: anchor, k, gain?, offset?, len?, pre? }]: sounds on a word (user note 2026-11-23: "gamitin mo lahat ng pwedeng
 // ilagay ... sound effects"). "pre" starts the file that many seconds before the word (a riser that peaks on it), "len"
@@ -232,8 +271,12 @@ for (let i = sfxDef.length - 1; i >= 0; i--) {
   const c = sfxDef[i];
   if (c.splitOut && sfxDef.some((d) => d !== c && !d.splitOut && d.t > c.t && d.t - c.t < 1.2)) sfxDef.splice(i, 1);
 }
+sfxDef.sort((a, b) => a.t - b.t);
+for (let i = sfxDef.length - 1; i > 0; i--) if (sfxDef[i].t - sfxDef[i - 1].t < 0.18) sfxDef.splice(sfxDef[i].gain > sfxDef[i - 1].gain ? i - 1 : i, 1);
 for (const c of sfxDef) if (!SFX[c.k]) throw new Error(`unknown sound "${c.k}" (add it under "sounds")`);
-const defaultSfx = sfxDef.map((c) => ({ t: +Math.max(0, c.t).toFixed(3), file: SFX[c.k], gain: c.gain, ...(c.len ? { len: c.len } : {}), ...(c.pre ? { pre: c.pre } : {}) }));
+// sound files that hold several takes play only their first one ("Pop 1" has three pops in 1.2 s)
+const SFX_LEN = { pop: 0.35 };
+const defaultSfx = sfxDef.map((c) => ({ t: +Math.max(0, c.t).toFixed(3), file: SFX[c.k], gain: c.gain, ...(c.len ?? SFX_LEN[c.k] ? { len: c.len ?? SFX_LEN[c.k] } : {}), ...(c.pre ? { pre: c.pre } : {}) }));
 
 // ---------- apply the user's edits (still base time) ----------
 const captions = (E.captions ?? defaultCaps).map((c) => ({ ...c })).sort((a, b) => a.start - b.start);
@@ -303,7 +346,8 @@ outCaps.forEach((c, i) => { if (outCaps[i + 1]) c.end = Math.min(c.end, outCaps[
 // drop captions that would sit under a kinetic text card, unless "kineticCaptions": true (user note 2026-11-23: "yung iba
 // walang subtitle"), which keeps every caption and lifts the kinetic cards above the caption line
 if (!C.kineticCaptions) {
-  const kw = cards.filter((c) => c.id.startsWith('emph') && !c.hidden && C.emphasis[Number(c.id.slice(4))]?.type === 'kinetic' && STAGE !== 'subs')
+  // any card with "hideCaps": true (e.g. a strike card sitting on the caption line) hides the captions under it too
+  const kw = cards.filter((c) => c.id.startsWith('emph') && !c.hidden && (C.emphasis[Number(c.id.slice(4))]?.type === 'kinetic' || C.emphasis[Number(c.id.slice(4))]?.hideCaps) && STAGE !== 'subs')
     .map((c) => [mapT(c.start), mapT(c.start + c.duration)]);
   // keep the words spoken outside the card (a caption line that runs past the card would otherwise vanish whole and
   // leave a stretch with no subtitle: user note 2026-11-23 "yung iba walang subtitle", then "huwag mo nang lagyan ng
@@ -383,8 +427,16 @@ const kinetic = (c, i) => {
   if (d > 0.45) tweens.push(`tl.to('#cap${i} .line',{opacity:0,y:-10,filter:'blur(6px)',duration:.12,ease:'power2.in'},${f3(c.end - 0.18)});`, `tl.set('#cap${i} .line',{opacity:0},${f3(c.end - 0.02)});`);
   return parts.join(' ');
 };
+// capStyle "karaoke" (a personal brand's caption style, user note 2026-11-24 "igaya mo dun sa reference"):
+// 2-3 white Poppins SemiBold words on her chest, and a rounded gold highlight that sits behind each word while it is said
+const KARAOKE = C.capStyle === 'karaoke';
+const karaoke = (c, i) => c.words.map((w, j) => {
+  const id = `cap${i}w${j}`, t0 = Math.max(c.start, w.t - 0.02), t1 = Math.min(c.end, c.words[j + 1]?.t ?? c.end) - 0.02;
+  if (t1 - t0 > 0.04) tweens.push(`tl.set('#${id} .hl',{opacity:1},${f3(t0)});`, `tl.set('#${id} .hl',{opacity:0},${f3(t1)});`);
+  return `<span id="${id}" class="kk"><span class="hl"></span><span class="tx">${esc(w.text)}</span></span>`;
+}).join(' ');
 const tweens = [];
-const capHtml = outCaps.map((c, i) => `<div id="cap${i}" class="clip cap${KINETIC && c.words ? ' kin' : ''}" data-start="${f3(c.start)}" data-duration="${f3(c.end - c.start)}" data-track-index="${10 + (i % 2)}"><span class="line">${KINETIC && c.words ? kinetic(c, i) : capLine(c.text)}</span></div>`).join('\n');
+const capHtml = outCaps.map((c, i) => `<div id="cap${i}" class="clip cap${KINETIC && c.words ? ' kin' : ''}${KARAOKE && c.words ? ' kara' : ''}" data-start="${f3(c.start)}" data-duration="${f3(c.end - c.start)}" data-track-index="${10 + (i % 2)}"><span class="line">${KINETIC && c.words ? kinetic(c, i) : KARAOKE && c.words ? karaoke(c, i) : capLine(c.text)}</span></div>`).join('\n');
 const pillCards = outCards.filter((c) => c.id.startsWith('pill'));
 const pillHtml = pillCards.map((c) => `<div id="${c.id}" ${clipAttrs(c, 20 + Number(c.id.slice(4)), 'clip pill')}><span>${esc(c.text)}</span></div>`).join('\n');
 const H = card('hook'), N = card('name'), OU = card('outro');
@@ -428,13 +480,15 @@ const ICONS = {
   people: 'M28 50 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0 M18 98 a24 24 0 0 1 48 0 M71 46 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0 M70 96 a20 20 0 0 1 36 -4',
   check: 'M16 60 a44 44 0 1 0 88 0 a44 44 0 1 0 -88 0 M38 62 L54 78 L84 46',
   phone: 'M40 14 H80 a8 8 0 0 1 8 8 V98 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V22 a8 8 0 0 1 8 -8 Z M52 94 H68',
+  book: 'M60 32 C 48 24, 30 22, 16 26 V96 C 30 92, 48 94, 60 102 C 72 94, 90 92, 104 96 V26 C 90 22, 72 24, 60 32 Z M60 32 V102',
+  growth: 'M20 100 H104 M30 88 V72 M52 88 V58 M74 88 V44 M96 88 V26 M24 62 L52 40 L70 52 L100 20 M84 20 H100 V36',
 };
 const artHtml = (c, e) => {
   const a = e.art, id = `${c.id}a`, t0 = c.s + 0.3, tA = (x) => (x != null ? mapT(at(x)) : t0);
   if (a.type === 'icon') {
     if (!ICONS[a.name]) throw new Error(`unknown art icon "${a.name}" (${Object.keys(ICONS).join(', ')})`);
     tweens.push(`tl.fromTo('#${id}',{opacity:0,scale:.7,rotation:-8},{opacity:1,scale:1,rotation:0,duration:.45,ease:'back.out(2)'},${f3(t0)});`,
-      `tl.fromTo('#${id} path',{strokeDasharray:420,strokeDashoffset:420},{strokeDashoffset:0,duration:.85,ease:'power2.out'},${f3(t0 + 0.05)});`,
+      `tl.fromTo('#${id} path',{strokeDasharray:420,strokeDashoffset:420},{strokeDashoffset:0,duration:1.15,ease:'power2.inOut'},${f3(t0 + 0.05)});`,
       `tl.to('#${id}',{y:-12,duration:${f3(Math.max(0.6, c.d - 0.6))},ease:'sine.inOut'},${f3(t0 + 0.5)});`);
     return `<svg id="${id}" class="art icon" viewBox="0 0 120 120"><path d="${ICONS[a.name]}"/></svg>`;
   }
@@ -464,6 +518,19 @@ const emphHtml = emphCards.map((c, k) => {
   const track = 30 + k;
   // "top" moves one card (e.g. a big word a little higher than emphTop); applied to the clip's own style
   const pos = e.top != null ? ` style="top:${e.top}px"` : '';
+  if (e.type === 'overlay') {
+    const o = inner[c.id];
+    e.lines.forEach((l, j) => {
+      const t = f3(c.s + o.lines[j]), sel = `#${c.id} .ol${j}`;
+      // a big word settles from a faint, slightly larger ghost (e.g. "money" / "change"); the rest blur in and rise a little
+      tweens.push((l.style ?? 'small') === 'big'
+        ? `tl.fromTo('${sel}',{opacity:0,scale:1.12,filter:'blur(6px)'},{opacity:.35,scale:1.05,filter:'blur(2px)',duration:.18,ease:'power1.out'},${t});tl.to('${sel}',{opacity:1,scale:1,filter:'blur(0px)',duration:.32,ease:'power3.out'},${f3(c.s + o.lines[j] + 0.18)});`
+        : `tl.fromTo('${sel}',{opacity:0,y:16,filter:'blur(8px)'},{opacity:1,y:0,filter:'blur(0px)',duration:.48,ease:'power3.out'},${t});`);
+    });
+    tweens.push(`tl.to('#${c.id} .in',{opacity:0,y:-10,filter:'blur(8px)',duration:.36,ease:'power2.in'},${f3(c.s + c.d - 0.38)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+    const z = SAFE ?? { x: 60, w: WW - 120 };
+    return `<div id="${c.id}" ${clipAttrs(c, track, 'clip ovl')} style="top:${e.top ?? 330}px;left:${z.x}px;width:${z.w}px;text-align:${e.align ?? 'center'}"><div class="in">${e.lines.map((l, j) => `<div class="ol ol${j} ${l.style ?? 'small'}">${esc(l.text)}</div>`).join('')}</div></div>`;
+  }
   if (e.type === 'stack') {
     const o = inner[c.id];
     e.lines.forEach((l, j) => tweens.push(`tl.fromTo('#${c.id} .sl${j}',{opacity:0,y:24,filter:'blur(8px)'},{opacity:1,y:0,filter:'blur(0px)',duration:.45,ease:'power3.out'},${f3(c.s + o.lines[j])});`));
@@ -486,15 +553,20 @@ const emphHtml = emphCards.map((c, k) => {
       lines.push(`<div class="kl" style="font-size:${base}px">${lt.map((k) => {
         const id = `${c.id}k${k.j}`, t = f3(c.s + k.t);
         if (k.kind === 'ser') {
-          tweens.push(`tl.fromTo('#${id}',{opacity:0,y:18,filter:'blur(10px)'},{opacity:1,y:0,filter:'blur(0px)',duration:.3,ease:'power3.out'},${t});`);
+          // After Effects-style text animators (2026-11-25): rise out of a mask with a motion blur, expo ease
+          tweens.push(`tl.fromTo('#${id}',{opacity:0,y:'.55em',clipPath:'inset(-20% -10% 100% -10%)',filter:'blur(8px)'},{opacity:1,y:0,clipPath:'inset(-20% -10% -20% -10%)',filter:'blur(0px)',duration:.7,ease:'expo.out'},${t});`);
           return `<span id="${id}" class="ks">${esc(k.text)}</span>`;
         }
         if (k.kind === 'hero') {
-          tweens.push(`tl.set('#${id}',{opacity:1},${t});`, `tl.fromTo('#${id} .ch',{opacity:0,filter:'blur(6px)',x:(i,_,a)=>(i-(a.length-1)/2)*30},{opacity:1,filter:'blur(0px)',x:0,duration:.38,ease:'power3.out',stagger:.012},${t});`);
+          tweens.push(`tl.set('#${id}',{opacity:1},${t});`, `tl.fromTo('#${id} .ch',{opacity:0,filter:'blur(8px)',y:'.45em',scale:1.25,x:(i,_,a)=>(i-(a.length-1)/2)*18},{opacity:1,filter:'blur(0px)',y:0,scale:1,x:0,duration:.75,ease:'expo.out',stagger:.025},${t});`);
           return `<span id="${id}" class="kh">${[...k.text].map((ch) => `<span class="ch">${esc(ch)}</span>`).join('')}</span>`;
         }
-        tweens.push(`tl.fromTo('#${id}',{opacity:0,scale:.6},{opacity:1,scale:1,duration:.4,ease:'back.out(2)'},${t});`, `tl.fromTo('#${id} .bx',{scaleX:0},{scaleX:1,duration:.26,ease:'power2.out'},${f3(c.s + k.t + 0.08)});`);
-        return `<span id="${id}" class="kb"><span class="bx"></span><span class="tx">${esc(k.text)}</span></span>`;
+        // the box wipes open first, then the word slides in over it out of a mask
+        tweens.push(`tl.set('#${id}',{opacity:1},${t});`, `tl.fromTo('#${id} .bx',{scaleX:0},{scaleX:1,duration:.6,ease:'expo.inOut'},${f3(c.s + k.t - 0.1)});`,
+          `tl.fromTo('#${id} .tx',{opacity:0,x:'-.4em',clipPath:'inset(-20% 100% -20% 0)',filter:'blur(6px)'},{opacity:1,x:0,clipPath:'inset(-20% -5% -20% 0)',filter:'blur(0px)',duration:.65,ease:'expo.out'},${f3(c.s + k.t + 0.12)});`,
+          `tl.fromTo('#${id}',{scale:.94},{scale:1,duration:.9,ease:'expo.out'},${t});`,
+          `tl.fromTo('#${id} .gn',{xPercent:-160,skewX:-20},{xPercent:420,skewX:-20,duration:.9,ease:'power2.inOut'},${f3(c.s + k.t + 0.55)});`); // a light glint sweeps the box
+        return `<span id="${id}" class="kb"><span class="bx"><span class="gn"></span></span><span class="tx">${esc(k.text)}</span></span>`;
       }).join(' ')}</div>`);
     }
     if (e.full) {
@@ -512,29 +584,114 @@ const emphHtml = emphCards.map((c, k) => {
       // moving wavy edge, and at the end lifts off upward back onto the footage. Back-to-back scenes of the same color
       // keep the background and only the words change; a scene of another color comes up as a new wave over the last.
       // The words leave with one of the reel's exits in turn: zoom through, slide away, squash, shrink.
-      const theme = (o) => C.emphasis[Number(o.id.slice(4))]?.theme === 'light' ? 'light' : 'dark';
+      const theme = (o) => C.emphasis[Number(o.id.slice(4))]?.theme ?? 'dark';
       const sameBg = prv && theme(prv) === theme(c);
+      // the last word stays up at least 1 s before the scene leaves ("SOLUTIONS" showed for a third of a second, 2026-11-25)
+      const lastTok = Math.max(...toks.map((k) => k.t));
+      if (!nxt && lastTok + 1.0 > c.d - 0.72) c.d = Math.round((lastTok + 1.72) * 1000) / 1000;
       const textEnd = nxt ? nxt.s : c.s + c.d;
       if (nxt) c.d = nxt.s - c.s + 0.6;
       const WV = (y, a) => `path('M0 ${y} C 180 ${y - a}, 360 ${y + a}, 540 ${y} S 900 ${y - a}, 1080 ${y} L1080 2400 L0 2400 Z')`; // colour below a wavy edge
       const LF = (y, a) => `path('M0 -400 L1080 -400 L1080 ${y} C 900 ${y + a}, 720 ${y - a}, 540 ${y} S 180 ${y + a}, 0 ${y} Z')`; // colour above a wavy edge
-      if (sameBg) tweens.push(`tl.set('#${c.id} .fbg',{opacity:1,clipPath:"${WV(-400, 0)}"},${f3(c.s)});`);
-      else tweens.push(`tl.fromTo('#${c.id} .fbg',{opacity:1,clipPath:"${WV(2080, 110)}"},{clipPath:"${WV(-360, -90)}",duration:.55,ease:'power3.inOut'},${f3(c.s - (prv ? 0 : 0.2))});`,
-        `tl.fromTo('#${c.id} .fwrap',{opacity:0},{opacity:1,duration:.15,ease:'power1.out'},${f3(c.s + (prv ? 0.3 : 0.15))});`); // words show once the wave is up
-      tweens.push(
-        ...[[240, -170, 1.15], [-280, -240, .9], [-200, 210, 1.2]].map(([x, y, sc], j) => `tl.fromTo('#${c.id} .fb${j + 1}',{x:0,y:0,scale:1},{x:${x},y:${y},scale:${sc},duration:${f3(c.d + 0.2)},ease:'sine.inOut'},${f3(c.s - 0.2)});`),
-        `tl.to('#${c.id} .in',{scale:1.05,duration:${f3(Math.max(0.3, textEnd - c.s - 0.4))},ease:'none'},${f3(c.s)});`);
+      // smoother passes (user note 2026-11-24 "gawin mong smooth yung mga movement nila at yung pag-pass"): a slower wave in
+      // (.75 s) and lift-off (.6 s), softer word exits (.45 s), and backgrounds that keep moving like the sample reels
+      // 2026-11-25 (user note "parang animator na gumagamit ng After Effects ... yung pagpasok and yung next na motion graphics
+      // ay maganda"): the scene opens as an iris from the words' center with a thin gold ring riding its edge, and the
+      // background settles from a 1.18 zoom (expo ease); a scene of the same look cross-dissolves with a small camera push.
+      const CX = z.x + z.w / 2, CY = z.y + z.h / 2, RMAX = Math.ceil(Math.hypot(Math.max(CX, WW - CX), Math.max(CY, HH - CY))) + 30;
+      const IR = (r) => `circle(${r}px at ${CX}px ${CY}px)`;
+      const tIn = c.s - (prv ? 0.12 : 0.36);
+      if (sameBg) tweens.push(`tl.fromTo('#${c.id} .fbg',{opacity:0,clipPath:"${IR(RMAX)}"},{opacity:1,duration:.35,ease:'power1.inOut'},${f3(c.s - 0.2)});`,
+        `tl.fromTo('#${c.id} .zm',{scale:1.035},{scale:1,duration:.9,ease:'expo.out'},${f3(c.s - 0.2)});`);
+      else tweens.push(`tl.fromTo('#${c.id} .fbg',{opacity:1,clipPath:"${IR(0)}"},{clipPath:"${IR(RMAX)}",duration:.85,ease:'expo.inOut'},${f3(tIn)});`,
+        `tl.fromTo('#${c.id} .zm',{scale:1.18,rotation:-2},{scale:1,rotation:0,duration:1.3,ease:'expo.out'},${f3(tIn + 0.1)});`,
+        `tl.fromTo('#${c.id} .iris',{opacity:1},{opacity:0,duration:.25,ease:'power1.in'},${f3(tIn + 0.62)});`,
+        `tl.fromTo('#${c.id} .iris circle',{attr:{r:0}},{attr:{r:${RMAX}},duration:.85,ease:'expo.inOut'},${f3(tIn)});`);
+      tweens.push(`tl.fromTo('#${c.id} .fwrap',{opacity:0},{opacity:1,duration:.2,ease:'power1.out'},${f3(c.s - 0.05)});`);
+      // background motion is a function of the video's own clock, so back-to-back scenes continue it without a jump
+      const t0 = c.s - 0.35, t1 = c.s + c.d;
+      const drift = (sel, fx) => {
+        const keys = [];
+        for (let t = t0; t < t1; t += 0.5) keys.push({ ...fx(Math.min(t1, t + 0.5)), duration: Math.min(0.5, t1 - t), ease: 'none' });
+        tweens.push(`tl.set('#${c.id} ${sel}',${JSON.stringify(fx(t0))},${f3(t0)});`, `tl.to('#${c.id} ${sel}',{keyframes:${JSON.stringify(keys)}},${f3(t0)});`);
+      };
+      const S = Math.sin, r1 = (v) => Math.round(v * 10) / 10;
+      const TH = ['light', 'paper', 'spot', 'grid'].includes(e.theme) ? e.theme : 'dark';
+      if (TH === 'paper') {
+        drift('.a1', (t) => ({ x: r1(46 * S(t / 9)), y: r1(34 * S(t / 11 + 1.3)), rotation: r1(7 * S(t / 13)) }));
+        drift('.a2', (t) => ({ x: r1(-54 * S(t / 10 + 1)), y: r1(-42 * S(t / 12)), rotation: r1(-6 * S(t / 14 + 2)) }));
+        drift('.d1', (t) => ({ x: r1(34 * S(t / 7)), y: r1(-48 * S(t / 9 + 1)), scale: r1(10 + 0.8 * S(t / 6)) / 10 }));
+        drift('.d2', (t) => ({ x: r1(-28 * S(t / 8 + 2)), y: r1(34 * S(t / 10)) }));
+        drift('.ast', (t) => ({ rotation: r1(14 * t) }));
+        drift('.gl', (t) => ({ x: r1(-60 * S(t / 9 + 0.5)), y: r1(22 * S(t / 7)) }));
+        if (!sameBg) tweens.push(`tl.fromTo('#${c.id} .gl path',{strokeDashoffset:1},{strokeDashoffset:0,duration:1.4,ease:'expo.inOut',stagger:.18},${f3(tIn + 0.3)});`,
+          `tl.fromTo('#${c.id} .astw',{scale:0,rotation:-120},{scale:1,rotation:0,duration:1,ease:'expo.out'},${f3(tIn + 0.45)});`,
+          `tl.fromTo('#${c.id} .dots',{opacity:0},{opacity:1,duration:.8,ease:'power1.out',stagger:.15},${f3(tIn + 0.3)});`);
+        else tweens.push(`tl.set('#${c.id} .gl path',{strokeDashoffset:0},${f3(c.s - 0.2)});`);
+      } else if (TH === 'spot') {
+        // a moving stage light (user note 2026-11-25 "pagalawin mo ... para hindi siya magmukhang static"): the spotlight
+        // wanders in a slow figure-eight and breathes, a soft beam from above sways with it, dust floats up through it,
+        // and a dashed gold orbit turns around the words
+        drift('.fb1', (t) => ({ x: r1(85 * S(t / 4.2)), y: r1(50 * S(t / 2.1 + 1)), scale: r1(100 + 6 * S(t / 2.6)) / 100 }));
+        drift('.beam', (t) => ({ rotation: r1(-7 * S(t / 4.2)), x: r1(85 * S(t / 4.2)) }));
+        drift('.orb', (t) => ({ rotation: r1(12 * t) }));
+        const R0 = Math.round(z.w * 0.64);
+        if (!sameBg) tweens.push(`tl.fromTo('#${c.id} .fb1',{opacity:0},{opacity:1,duration:1.1,ease:'power2.out'},${f3(tIn + 0.25)});`,
+          `tl.fromTo('#${c.id} .beam',{opacity:0},{opacity:1,duration:1.4,ease:'power2.out'},${f3(tIn + 0.4)});`,
+          `tl.fromTo('#${c.id} .orb circle',{opacity:0,attr:{r:${Math.round(R0 * 0.55)}}},{opacity:1,attr:{r:${R0}},duration:1.3,ease:'expo.out'},${f3(tIn + 0.45)});`);
+        else tweens.push(`tl.set('#${c.id} .beam',{opacity:1},${f3(c.s - 0.2)});`, `tl.set('#${c.id} .orb circle',{opacity:1,attr:{r:${R0}}},${f3(c.s - 0.2)});`);
+      } else if (TH === 'grid') {
+        // dark grid (user note 2026-11-25, with a reference picture: "ganitong background na lang ... palitan mo niyan"):
+        // charcoal with a fine grid; the grid pans slowly, a soft light glides over it and lights its lines where it passes,
+        // and on the way in the grid lines sweep in from the center
+        drift('.gridw', (t) => ({ x: r1(30 * S(t / 6)), y: r1(24 * S(t / 7.5 + 1)) }));
+        drift('.grid.lit', (t) => ({ '--lx': `${r1(CX + 260 * S(t / 3.6))}px`, '--ly': `${r1(CY + 330 * S(t / 4.7 + 1))}px` }));
+        drift('.fb1', (t) => ({ x: r1(260 * S(t / 3.6)), y: r1(330 * S(t / 4.7 + 1)) }));
+        if (!sameBg) tweens.push(`tl.fromTo('#${c.id} .gridw',{clipPath:'inset(50% 0% 50% 0%)',opacity:0},{clipPath:'inset(0% 0% 0% 0%)',opacity:1,duration:1.2,ease:'expo.inOut'},${f3(tIn + 0.15)});`,
+          `tl.fromTo('#${c.id} .fb1',{opacity:0},{opacity:1,duration:1.2,ease:'power2.out'},${f3(tIn + 0.4)});`);
+      } else {
+        [[230, 170, 0], [-260, 230, 2], [-190, -200, 4]].forEach(([ax, ay, ph], j) => drift(`.fb${j + 1}`, (t) => ({ x: r1(ax * S(t / 7 + ph)), y: r1(ay * S(t / 9 + ph)), scale: r1(100 + 14 * S(t / 8 + ph)) / 100 })));
+      }
+      if (TH === 'paper') for (let k = 0; k < 9; k++) drift(`.p${k}`, (t) => ({ x: r1(26 * S(t / (5 + k % 3) + k)), y: r1(-44 * S(t / (6 + k % 4) + k * 1.7)) }));
+      // spot dust rises slowly through the light and wraps around (position from the clock, so chained scenes match)
+      if (TH === 'spot') for (let k = 0; k < 9; k++) drift(`.p${k}`, (t) => ({ x: r1(30 * S(t / (2 + k % 3) + k)), y: r1(350 - 700 * ((t * (26 + k * 5) + k * 211) % 700) / 700), opacity: r1(10 * S(Math.PI * ((t * (26 + k * 5) + k * 211) % 700) / 700)) / 10 }));
+      // a slow camera on the whole background, from the clock too
+      drift('.cam', (t) => ({ scale: r1(1040 + 25 * S(t / 5)) / 1000, rotation: r1(0.8 * S(t / 7)) }));
+      // a giant outline of the scene's key word behind the text, sliding slowly (paper and grid)
+      const bgWord = (toks.find((k) => k.kind === 'box') ?? toks.find((k) => k.kind === 'hero'))?.text.replace(/[.,!?]+$/, '');
+      if (bgWord && (TH === 'paper' || TH === 'grid')) {
+        drift('.bgw', (t) => ({ x: r1(140 - 48 * (t - c.s)) }));
+        tweens.push(`tl.fromTo('#${c.id} .bgw span',{opacity:0,y:120},{opacity:1,y:0,duration:1.4,ease:'expo.out'},${f3(c.s + 0.1)});`);
+      }
+      tweens.push(`tl.to('#${c.id} .in',{scale:1.05,duration:${f3(Math.max(0.3, textEnd - c.s - 0.4))},ease:'sine.inOut'},${f3(c.s)});`);
       const nFull = outCards.filter((o) => isFull(o) && o.s < c.s).length;
       const out = [
-        `{scale:2.8,opacity:0,filter:'blur(16px)',duration:.3,ease:'power2.in'}`,
-        `{x:-700,opacity:0,filter:'blur(14px)',duration:.24,ease:'power2.in'}`,
-        `{scaleY:.02,scaleX:1.2,opacity:0,duration:.18,ease:'power2.in'}`,
-        `{scale:.3,opacity:0,duration:.2,ease:'power2.in'}`,
+        `{scale:1.6,opacity:0,filter:'blur(14px)',duration:.45,ease:'power2.in'}`,
+        `{x:-260,opacity:0,filter:'blur(12px)',duration:.42,ease:'power2.in'}`,
+        `{y:-70,opacity:0,filter:'blur(10px)',duration:.42,ease:'power2.in'}`,
+        `{scale:.86,opacity:0,filter:'blur(8px)',duration:.42,ease:'power2.in'}`,
       ][nFull % 4];
-      const tOut = textEnd - (nxt ? 0.32 : 0.62);
-      tweens.push(`tl.to('#${c.id} .in',${out},${f3(tOut)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(tOut + 0.31)});`);
-      if (!nxt) tweens.push(`tl.fromTo('#${c.id} .fbg',{clipPath:"${LF(2100, 100)}"},{clipPath:"${LF(-380, -90)}",duration:.42,ease:'power3.in'},${f3(c.s + c.d - 0.44)});`, `tl.set('#${c.id} .fbg',{opacity:0},${f3(c.s + c.d - 0.02)});`);
-      return `<div id="${c.id}" ${clipAttrs(c, track, `clip kin-card kin-full ${e.theme === 'light' ? 'light' : 'dark'}`)}><div class="fbg"><i class="fb1"></i><i class="fb2"></i><i class="fb3"></i></div><div class="fwrap" style="left:${z.x}px;width:${z.w}px;top:${z.y}px;height:${z.h}px"><div class="in">${e.art ? artHtml(c, e) : ''}${lines.join('')}</div></div></div>`;
+      const tOut = textEnd - (nxt ? 0.42 : 0.72);
+      tweens.push(`tl.to('#${c.id} .in',${out},${f3(tOut)});`, `tl.set('#${c.id} .in',{opacity:0},${f3(tOut + 0.46)});`);
+      // back to the footage: the iris closes on the center with the gold ring, the background falling away a little
+      if (!nxt) tweens.push(`tl.fromTo('#${c.id} .fbg',{clipPath:"${IR(RMAX)}"},{clipPath:"${IR(0)}",duration:.75,ease:'expo.inOut'},${f3(c.s + c.d - 0.77)});`,
+        `tl.to('#${c.id} .zm',{scale:.9,rotation:2,duration:.75,ease:'expo.in'},${f3(c.s + c.d - 0.77)});`,
+        `tl.fromTo('#${c.id} .iris',{opacity:0},{opacity:1,duration:.2,ease:'power1.out'},${f3(c.s + c.d - 0.7)});`,
+        `tl.fromTo('#${c.id} .iris circle',{attr:{r:${RMAX}}},{attr:{r:0},duration:.75,ease:'expo.inOut'},${f3(c.s + c.d - 0.77)});`,
+        `tl.set('#${c.id} .fbg',{opacity:0},${f3(c.s + c.d - 0.02)});`, `tl.set('#${c.id} .iris',{opacity:0},${f3(c.s + c.d - 0.02)});`);
+      // themes: dark (brand fluid), light (white flash), and the aesthetic ones from my-style-refs (user note 2026-11-24, a
+      // personal brand): "paper" = warm cream vignette, a grey swoosh arc, halftone dots and a slowly turning asterisk (R2/R3), the key
+      // word in a brand-color highlight box with dark text; "spot" = a dark room with a soft white spotlight the words sit in (R2)
+      const dust = TH === 'paper' || TH === 'spot' ? Array.from({ length: 9 }, (_, k) => `<i class="pt p${k}" style="left:${(97 + k * 113) % 1000 + 20}px;top:${(310 + k * 197) % 1500 + 200}px;width:${6 + (k * 5) % 9}px;height:${6 + (k * 5) % 9}px"></i>`).join('') : '';
+      // paper: thin gold "trim path" curves draw across the top and bottom (After Effects style); spot: a beam and a dashed orbit
+      const gold = `<svg class="gl" viewBox="0 0 ${WW} ${HH}"><path pathLength="1" d="M-60 ${z.y - 40} C ${WW * 0.3} ${z.y - 200}, ${WW * 0.62} ${z.y + 140}, ${WW + 60} ${z.y - 90}"/><path pathLength="1" d="M-60 ${z.y + z.h + 150} C ${WW * 0.35} ${z.y + z.h + 330}, ${WW * 0.66} ${z.y + z.h - 10}, ${WW + 60} ${z.y + z.h + 210}"/></svg>`;
+      const orb = `<svg class="orb" viewBox="0 0 ${WW} ${HH}" style="transform-origin:${CX}px ${CY}px"><circle pathLength="1" cx="${CX}" cy="${CY}" r="${Math.round(z.w * 0.64)}"/></svg>`;
+      const deco = (TH === 'paper' ? `<i class="arc a1"></i><i class="arc a2"></i><i class="dots d1"></i><i class="dots d2"></i><i class="astw"><svg class="ast" viewBox="0 0 100 100"><path d="M50 10V90M10 50H90M22 22L78 78M78 22L22 78"/></svg></i>${gold}` : '')
+        + (TH === 'spot' ? `<i class="beam" style="left:${CX - 420}px"></i>${orb}` : '')
+        + (TH === 'grid' ? `<div class="gridw"><div class="grid"></div><div class="grid lit" style="--lx:${CX}px;--ly:${CY}px"></div></div>` : '')
+        + (bgWord && (TH === 'paper' || TH === 'grid') ? `<div class="bgw" style="top:${Math.round(CY - 210)}px"><span>${esc(bgWord)}</span></div>` : '') + dust;
+      const vig = TH === 'paper' || TH === 'spot' || TH === 'grid' ? '<div class="vig"></div>' : '';
+      return `<div id="${c.id}" ${clipAttrs(c, track, `clip kin-card kin-full ${TH}`)}><div class="fbg"><div class="zm"><div class="cam"><i class="fb1"></i><i class="fb2"></i><i class="fb3"></i>${deco}</div></div>${vig}</div><svg class="iris" viewBox="0 0 ${WW} ${HH}"><circle cx="${CX}" cy="${CY}" r="0"/></svg><div class="fwrap" style="left:${z.x}px;width:${z.w}px;top:${z.y}px;height:${z.h}px"><div class="in">${e.art ? artHtml(c, e) : ''}${lines.join('')}</div></div></div>`;
     }
     tweens.push(`tl.fromTo('#${c.id} .ksh',{opacity:0},{opacity:1,duration:.3},${f3(c.s)});`,
       `tl.to('#${c.id} .in',{opacity:0,y:-18,filter:'blur(8px)',duration:.3,ease:'power2.in'},${f3(c.s + c.d - 0.34)});`, `tl.to('#${c.id} .ksh',{opacity:0,duration:.3,ease:'power1.in'},${f3(c.s + c.d - 0.34)});`, `tl.set('#${c.id} .ksh',{opacity:0},${f3(c.s + c.d - 0.02)});`, // the shade fades with the words (it used to cut off)
@@ -580,6 +737,17 @@ const brollCards = outCards.filter((c) => c.id.startsWith('broll'));
 const IMG = /\.(jpe?g|png|webp)$/i;
 const brollHtml = brollCards.map((c) => {
   const i = Number(c.id.slice(5)), b = C.broll[i], full = (b.mode ?? 'full') === 'full';
+  // motion-graphic B-roll (user note 2026-11-24 "palitan mo yung ibang B-rolls ng motion graphics na B-rolls"): a full
+  // cut-away drawn in code instead of a clip: { from, to, art: { type: icon|count|chart|checklist, ... }, title?, theme? }.
+  // The title takes *gold italic* words; the captions stay on top, as on a clip; straight cut in and out.
+  if (b.art) {
+    const title = b.title ? `<div class="mtitle">${String(b.title).split(/(\*[^*]+\*)/).filter(Boolean).map((w, k) => (w.startsWith('*')
+      ? `<span class="mt mt${k} g">${esc(w.slice(1, -1))}</span>` : `<span class="mt mt${k}">${esc(w)}</span>`)).join('')}</div>` : '';
+    tweens.push(`tl.fromTo('#${c.id} .mgin',{scale:1},{scale:1.05,duration:${f3(c.d)},ease:'none'},${f3(c.s)});`,
+      `tl.fromTo('#${c.id} .mt',{opacity:0,y:16,filter:'blur(8px)'},{opacity:1,y:0,filter:'blur(0px)',duration:.35,ease:'power3.out',stagger:.12},${f3(c.s + 0.05)});`,
+      ...[[160, -120, 1.2], [-180, 140, 0.9]].map(([x, y, sc], j) => `tl.fromTo('#${c.id} .g${j + 1}',{x:0,y:0,scale:1},{x:${x},y:${y},scale:${sc},duration:${f3(c.d)},ease:'sine.inOut'},${f3(c.s)});`));
+    return `<div id="${c.id}" ${clipAttrs(c, 50 + i, `clip broll full mg ${b.theme ?? 'dark'}`)}><div class="mgbg"><i class="g1"></i><i class="g2"></i></div><div class="mgin">${b.art.type === 'checklist' ? '' : title}${artHtml(c, { art: b.art })}${b.art.type === 'checklist' ? title : ''}</div></div>`;
+  }
   const prepped = `broll/_prep/${b.file.split('/').pop().replace(/\.[^.]+$/, '')}.mp4`;
   const src = !IMG.test(b.file) && existsSync(here(`./${prepped}`)) ? prepped : b.file;
   const media = IMG.test(b.file)
@@ -587,7 +755,10 @@ const brollHtml = brollCards.map((c) => {
     : `<video id="${c.id}v" class="bm" src="assets/${esc(src)}" data-start="${f3(c.s)}" data-duration="${f3(c.d)}" data-media-start="${f3(b.clipStart ?? 0)}" data-track-index="${70 + i}" muted playsinline></video>`;
   const WVb = (y, a) => `path('M0 ${y} C 180 ${y - a}, 360 ${y + a}, 540 ${y} S 900 ${y - a}, 1080 ${y} L1080 2400 L0 2400 Z')`;
   const LFb = (y, a) => `path('M0 -400 L1080 -400 L1080 ${y} C 900 ${y + a}, 720 ${y - a}, 540 ${y} S 180 ${y + a}, 0 ${y} Z')`;
-  if (full) {
+  if (full && b.cut) {
+    // "cut": true: a straight cut in and out (a speaker's own B-roll edits), with the slow push-in
+    tweens.push(`tl.fromTo('#${c.id} .bm',{scale:1.08},{scale:1,duration:${f3(c.d)},ease:'none'},${f3(c.s)});`);
+  } else if (full) {
     tweens.push(`tl.fromTo('#${c.id}',{clipPath:"${WVb(HH + 160, 110)}"},{clipPath:"${WVb(-360, -90)}",duration:.55,ease:'power3.inOut'},${f3(c.s)});`,
       `tl.fromTo('#${c.id} .bm',{scale:1.14},{scale:1.02,duration:${f3(c.d)},ease:'none'},${f3(c.s)});`,
       `tl.fromTo('#${c.id}',{clipPath:"${LFb(HH + 180, 100)}"},{clipPath:"${LFb(-380, -90)}",duration:.42,ease:'power3.in'},${f3(c.s + c.d - 0.44)});`,
@@ -751,6 +922,10 @@ const html = `<!doctype html>
   text-shadow:0 3px 0 #000,0 4px 12px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.85)} /* solid black shadow (user note, 2026-11-18) */
 .cap .kw{display:inline-block;transform-origin:50% 60%;font-weight:900;font-size:60px;color:${RED};text-transform:uppercase;letter-spacing:-1px;vertical-align:-4px;
   -webkit-text-stroke:5px #fff;paint-order:stroke fill;text-shadow:0 6px 22px rgba(0,0,0,.7)}
+.cap.kara .line{font-family:Poppins,Arial,sans-serif;font-weight:${C.capWeight ?? 700};word-spacing:-6px;font-size:${C.capSize ?? 46}px;letter-spacing:-.2px;text-shadow:0 2px 3px rgba(0,0,0,.55),0 3px 14px rgba(0,0,0,.45)}
+.cap.kara .kk{position:relative;display:inline-block;padding:0 6px 3px;margin:0 -2px}
+.cap.kara .kk .hl{position:absolute;left:0;right:0;top:3px;bottom:0;background:${C.capHighlight ?? 'rgba(186,152,84,.9)'};border-radius:10px;opacity:0}
+.cap.kara .kk .tx{position:relative}
 .cap.kin .line{display:flex;align-items:center;gap:14px;font-size:0}
 .kin .kw-s,.kin .kw-b,.kin .kw-h{display:inline-block;opacity:0;line-height:1.1;text-shadow:0 3px 10px rgba(0,0,0,.8),0 1px 2px rgba(0,0,0,.6)}
 .kin .kw-s{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;font-size:50px;color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.8)}
@@ -792,17 +967,76 @@ const html = `<!doctype html>
 .kin-card .kb{position:relative;padding:.02em .3em .12em;transform-origin:50% 60%}
 .kin-card .kb .bx{position:absolute;inset:0;background:${RED};border-radius:.2em;transform-origin:left center;box-shadow:0 18px 50px rgba(0,0,0,.4)}
 .kin-full{inset:0;z-index:30}
-.kin-full .fbg{position:absolute;inset:0;overflow:hidden;opacity:0;background:radial-gradient(ellipse at 50% 40%,#3a0000 0%,#0d0000 75%)}
+.kin-full .fbg{position:absolute;inset:0;overflow:hidden;opacity:0;background:radial-gradient(ellipse at 50% 40%,${SC[0]} 0%,${SC[1]} 75%)}
 .kin-full .fbg i{position:absolute;border-radius:50%;filter:blur(90px)}
-.kin-full .fb1{width:900px;height:900px;left:-200px;top:200px;background:#c00010;opacity:.85}
-.kin-full .fb2{width:800px;height:800px;left:420px;top:900px;background:#7a0008;opacity:.9}
-.kin-full .fb3{width:700px;height:700px;left:300px;top:-150px;background:#e0102a;opacity:.55}
-.kin-full.light .fbg{background:#fff}.kin-full.light .fbg i{background:#ffd6d6;opacity:.55}
+.kin-full .fb1{width:900px;height:900px;left:-200px;top:200px;background:${SC[2]};opacity:.85}
+.kin-full .fb2{width:800px;height:800px;left:420px;top:900px;background:${SC[3]};opacity:.9}
+.kin-full .fb3{width:700px;height:700px;left:300px;top:-150px;background:${SC[4]};opacity:.55}
+.kin-full.light .fbg{background:#fff}.kin-full.light .fbg i{background:${BR.light ?? '#ffd6d6'};opacity:.55}
 .kin-full .fwrap{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:center}
 .kin-full .in{transform-origin:50% 50%}
-.kin-full.light .ks{color:#2a2a2a;text-shadow:none}.kin-full.light .kh{color:${RED};text-shadow:none}
+.kin-full.light .ks{color:#2a2a2a;text-shadow:none}.kin-full.light .kh{color:${BR.lightHero ?? RED};text-shadow:none}
+.kin-full.paper .fbg{background:radial-gradient(ellipse at 50% 44%,#fdf9f6 0%,#f1e6e1 55%,#ddcbc4 100%)} /* her Champagne #E7D9D7 + Mocha #68504C */
+.kin-full.paper .fb1,.kin-full.paper .fb2,.kin-full.paper .fb3{display:none}
+.kin-full.paper .arc{position:absolute;border-radius:50%;border:110px solid rgba(104,80,76,.16);width:1500px;height:1500px}
+.kin-full.paper .a1{left:-880px;top:-900px}.kin-full.paper .a2{left:520px;top:1500px;border-width:70px;border-color:rgba(104,80,76,.1)}
+.kin-full.paper .dots{position:absolute;width:420px;height:420px;background-image:radial-gradient(rgba(104,80,76,.3) 2.6px,transparent 3.2px);background-size:24px 24px;
+  -webkit-mask-image:radial-gradient(circle,#000 25%,transparent 68%);mask-image:radial-gradient(circle,#000 25%,transparent 68%)}
+.kin-full.paper .d1{left:600px;top:330px}.kin-full.paper .d2{left:40px;top:1260px;width:320px;height:320px}
+.kin-full .fbg .arc,.kin-full .fbg .dots,.kin-full .fbg .pt{filter:none} /* the blob blur hid the decor */
+.kin-full .pt{position:absolute;border-radius:50%;background:rgba(104,80,76,.28)}.kin-full.spot .pt{background:rgba(255,248,235,.28)}
+.kin-full.paper .astw{position:absolute;left:820px;top:250px;width:96px;height:96px;filter:none;border-radius:0}
+.kin-full.paper .ast{position:absolute;left:0;top:0;width:96px;height:96px;fill:none;stroke:#8a6f69;stroke-width:5;stroke-linecap:round}
+.kin-full .zm,.kin-full .cam{position:absolute;inset:0}
+.kin-full .vig{position:absolute;inset:0}
+.kin-full.paper .vig{background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(70,52,30,.2) 100%)}
+.kin-full.spot .vig{background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 42%,rgba(0,0,0,.6) 100%)}
+.kin-full .iris{position:absolute;left:0;top:0;width:${WW}px;height:${HH}px;opacity:0;overflow:visible}
+.kin-full .iris circle{fill:none;stroke:${BR.gold ?? RED};stroke-width:5}
+.kin-full .gl,.kin-full .orb{position:absolute;left:0;top:0;width:${WW}px;height:${HH}px;overflow:visible}
+.kin-full .gl path{fill:none;stroke:${BR.gold ?? RED};stroke-width:4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:.9}
+.kin-full .orb circle{fill:none;stroke:${BR.gold ?? RED};stroke-width:2.5;stroke-linecap:round;stroke-dasharray:.62 .05 .2 .13;opacity:0}
+.kin-full.spot .beam{position:absolute;top:-260px;width:840px;height:1900px;border-radius:0;filter:none;transform-origin:50% 0;opacity:0;
+  background:conic-gradient(from 160deg at 50% 0%,rgba(255,250,240,0) 0deg,rgba(255,250,240,.16) 20deg,rgba(255,250,240,0) 40deg);
+  -webkit-mask-image:linear-gradient(180deg,#000 30%,transparent 95%);mask-image:linear-gradient(180deg,#000 30%,transparent 95%)}
+.kin-full.spot .fbg{background:#151311}
+.kin-full.spot .fb1{width:1150px;height:1150px;left:-35px;top:310px;background:radial-gradient(circle,#ffffff 0%,#f4f0e9 44%,rgba(244,240,233,0) 70%);filter:none;opacity:1}
+.kin-full.spot .fb2,.kin-full.spot .fb3{display:none}
+.kin-full.paper .ks{color:#68504c;text-shadow:none}.kin-full.spot .ks{color:#4a4136;text-shadow:none}
+.kin-full.paper .kh,.kin-full.spot .kh{color:#2b211f;text-shadow:none}
+.kin-card .kb .bx{overflow:hidden}.kin-card .kb .gn{position:absolute;top:-30%;bottom:-30%;left:0;width:35%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.7),rgba(255,255,255,0))}
+.kin-full .bgw{position:absolute;left:0;width:${WW}px;white-space:nowrap;text-align:center;font:800 400px/1 Poppins,Arial,sans-serif;letter-spacing:-.03em}
+.kin-full .bgw span{display:inline-block;color:transparent;opacity:0}
+.kin-full.paper .bgw span{-webkit-text-stroke:3px rgba(104,80,76,.16)}
+.kin-full.grid .bgw span{-webkit-text-stroke:3px rgba(255,255,255,.07)}
+.kin-full.grid .fbg{background:radial-gradient(ellipse at 50% 45%,#272727 0%,#1b1b1b 60%,#121212 100%)}
+.kin-full.grid .fb1{width:1000px;height:1000px;left:${Math.round((SAFE ? SAFE.x + SAFE.w / 2 : WW / 2) - 500)}px;top:${Math.round((SAFE ? SAFE.y + SAFE.h / 2 : HH / 2) - 500)}px;background:radial-gradient(circle,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 62%);filter:none;opacity:1}
+.kin-full.grid .fb2,.kin-full.grid .fb3{display:none}
+.kin-full.grid .gridw{position:absolute;left:-112px;top:-112px;width:${WW + 224}px;height:${HH + 224}px}
+.kin-full.grid .grid{position:absolute;inset:0;background-size:56px 56px;
+  background-image:linear-gradient(rgba(255,255,255,.075) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(255,255,255,.075) 1.5px,transparent 1.5px)}
+.kin-full.grid .grid.lit{background-image:linear-gradient(rgba(236,214,166,.3) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(236,214,166,.3) 1.5px,transparent 1.5px);
+  -webkit-mask-image:radial-gradient(circle 430px at calc(var(--lx) + 112px) calc(var(--ly) + 112px),#000 0%,transparent 100%);mask-image:radial-gradient(circle 430px at calc(var(--lx) + 112px) calc(var(--ly) + 112px),#000 0%,transparent 100%)}
+.kin-full.grid .vig{background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)}
+.kin-full.grid .ks{color:#fbfaf8;text-shadow:0 4px 22px rgba(40,36,32,.45)}
+.kin-full.grid .kh .ch{background:linear-gradient(180deg,#fbe7a8 0%,#e9c46a 50%,#c9a55c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.kin-full.grid .kh{text-shadow:none;filter:drop-shadow(0 8px 22px rgba(40,36,32,.45))}
+.kin-full.grid .kb .bx{background:linear-gradient(180deg,#f6d77e,#c9a55c);box-shadow:0 14px 40px rgba(40,36,32,.4)}
+.kin-full.grid .kb .tx{color:#1c1a19}
+.kin-full.grid .art.icon{stroke:#fbfaf8;filter:drop-shadow(0 6px 18px rgba(40,36,32,.45))}
+.kin-full.paper .kb .bx,.kin-full.spot .kb .bx{background:${RED};box-shadow:none}
+.kin-full.paper .kb .tx,.kin-full.spot .kb .tx{color:#1a1612}
+.kin-full.paper .art.icon,.kin-full.spot .art.icon{stroke:#2a241c;filter:none}
 .kin-full.dark .kb .bx{background:#fff}.kin-full.dark .kb .tx{color:${RED}}
 .kin-card .kb .tx{position:relative;font-family:Poppins,Arial,sans-serif;font-weight:800;font-size:1.04em;letter-spacing:-.02em;color:#fff}
+.ovl{position:absolute;z-index:18;pointer-events:none}
+.ovl .ol{font-family:Poppins,Arial,sans-serif;color:#fff;line-height:1.02;white-space:nowrap;opacity:0;transform-origin:50% 60%;
+  text-shadow:0 3px 4px rgba(0,0,0,.45),0 6px 22px rgba(0,0,0,.45)}
+.ovl .small{font-weight:600;font-size:${PORTRAIT ? 46 : 38}px}
+.ovl .big{font-weight:800;font-size:${PORTRAIT ? 118 : 96}px;letter-spacing:-2px;margin:-6px 0 -10px}
+.ovl .gold{font-weight:800;font-style:italic;font-size:${PORTRAIT ? 84 : 70}px;letter-spacing:-1px;color:${BR.gold ?? '#d2ae63'}}
+.ovl .goldSmall{font-weight:700;font-style:italic;font-size:${PORTRAIT ? 46 : 38}px;color:${BR.gold ?? '#d2ae63'}}
+.ovl .dim{font-weight:600;font-size:${PORTRAIT ? 46 : 38}px;color:rgba(255,255,255,.72)}
 .art{display:block;margin:0 auto 34px}
 .art.icon{width:300px;height:300px;fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 14px 34px rgba(0,0,0,.45))}
 .kin-full.light .art.icon{stroke:${RED};filter:none}
@@ -817,6 +1051,25 @@ const html = `<!doctype html>
 .art.checklist .ci{display:flex;align-items:center;gap:22px;opacity:0;white-space:nowrap}
 .art.checklist .ck{display:inline-flex;align-items:center;justify-content:center;width:70px;height:70px;border-radius:50%;background:${RED};color:#fff;font-size:44px}
 .kin-full.dark .art.checklist .ck{background:#fff;color:${RED}}
+.broll.mg{z-index:14;overflow:hidden}
+.mg .mgbg{position:absolute;inset:0;background:${BR.mgLight ?? '#f3eee4'}}
+.mg.dark .mgbg{background:radial-gradient(ellipse at 50% 40%,#2a1f10 0%,#0b0804 75%)}
+.mg.dark .mgbg i{background:#8a6428;opacity:.35}
+.mg .mgbg i{position:absolute;border-radius:50%;filter:blur(80px);opacity:.55}
+.mg .g1{width:700px;height:700px;left:-160px;top:180px;background:${BR.light ?? '#f1ddb0'}}
+.mg .g2{width:640px;height:640px;left:520px;top:980px;background:${BR.light ?? '#f1ddb0'}}
+.mg .mgin{position:absolute;left:${SAFE ? SAFE.x : 90}px;width:${SAFE ? SAFE.w : WW - 180}px;top:${SAFE ? SAFE.y + 40 : 300}px;height:${(C.capTop ?? L.capTop) - (SAFE ? SAFE.y + 40 : 300) - 60}px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transform-origin:50% 50%}
+.mg .mtitle{font-family:Poppins,Arial,sans-serif;font-weight:800;font-size:${PORTRAIT ? 74 : 58}px;line-height:1.08;color:#1f1a12;text-align:center;margin:0 0 30px;letter-spacing:-1px}
+.mg.dark .mtitle{color:#fff}
+.mg .mt{display:inline-block;white-space:pre}
+.mg .mt.g{font-style:italic;color:${BR.gold ?? RED}}
+.mg .art.icon{width:430px;height:430px;stroke:${BR.gold ?? RED};stroke-width:7;filter:none}
+.mg.dark .art.icon{stroke:${BR.gold ?? RED};filter:drop-shadow(0 0 26px rgba(210,174,99,.35))}
+.mg .art.count{color:#1f1a12;text-shadow:none}.mg.dark .art.count{color:#fff}
+.mg .art.chart .cb{background:${BR.gold ?? RED}}
+.mg .art.checklist{color:#1f1a12;margin-bottom:30px}.mg.dark .art.checklist{color:#fff}
+.mg .art.checklist .ck{background:${BR.gold ?? RED};color:#fff}
 .broll{position:absolute;inset:0;pointer-events:none}
 .broll.full{z-index:14;overflow:hidden;background:#000}
 .broll .bwrap{position:absolute;inset:0;overflow:hidden}

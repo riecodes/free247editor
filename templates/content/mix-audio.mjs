@@ -30,6 +30,15 @@ const onset = (f) => { // seconds of leading silence
   const m = err.match(/silence_start: (-?[\d.]+)[\s\S]*?silence_end: ([\d.]+)/);
   return m && Number(m[1]) <= 0.01 ? Number(m[2]) : 0;
 };
+// the loudest 10 ms of a sound (its "hit": a whoosh's swell, a pop's click); cues line this moment up with the text
+// landing on screen (user note 2026-11-25), so a whoosh that builds for 0.4 s starts 0.4 s early
+const hitAt = (f, len = 2.5) => {
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', f, '-t', String(Math.min(len, 1.5)), '-ac', '1', '-ar', '16000', '-f', 's16le', '-'], { maxBuffer: 1 << 26 });
+  const b = r.stdout, n = Math.floor(b.length / 2), w = 160;
+  let best = 0, bv = -1;
+  for (let i = 0; i + w <= n; i += w) { let e = 0; for (let j = i; j < i + w; j++) { const v = b.readInt16LE(j * 2); e += v * v; } if (e > bv) { bv = e; best = i; } }
+  return best / 16000;
+};
 const peak = (f, len = 2.5) => Number(ff(['-i', f, '-af', `atrim=0:${len},volumedetect`, '-f', 'null', '-'], true).match(/max_volume: (-?[\d.]+) dB/)[1]);
 
 const { duration, cues } = JSON.parse(readFileSync('sfx-cues.json'));
@@ -48,12 +57,12 @@ cues.forEach((c, i) => {
   const f = resolve(SOUNDS, c.file);
   if (!f.startsWith(SOUNDS + sep) || !existsSync(f)) { console.error(`missing or outside my-sounds: ${c.file}`); process.exit(1); }
   const len = c.len ?? 2.5; // "len" lets risers and stingers run longer; "pre" starts them before the cue time
-  used[c.file + len] ??= { onset: c.pre ? 0 : onset(f), peakDb: peak(f, len) };
+  used[c.file + len] ??= { onset: c.pre ? 0 : hitAt(f, len), peakDb: peak(f, len) };
   const u = used[c.file + len];
   inputs.push('-i', f);
   const ms = Math.max(0, Math.round((c.t - (c.pre ?? 0) - u.onset) * 1000));
   const gain = SFX_PEAK - u.peakDb + c.gain + SFX_TRIM;
-  chains.push(`[${i + SFX0}:a]aformat=sample_rates=48000:channel_layouts=stereo,atrim=0:${len},afade=t=out:st=${(len - 0.4).toFixed(2)}:d=0.4,volume=${gain.toFixed(2)}dB,adelay=${ms}|${ms}[s${i}]`);
+  chains.push(`[${i + SFX0}:a]aformat=sample_rates=48000:channel_layouts=stereo,atrim=0:${len},afade=t=out:st=${Math.max(0, len - 0.4).toFixed(2)}:d=${Math.min(0.4, len).toFixed(2)},volume=${gain.toFixed(2)}dB,adelay=${ms}|${ms}[s${i}]`);
 });
 // voice padded to the full length so the mix (and music) runs through the logo end screen
 chains.push(`[0:a]aformat=sample_rates=48000:channel_layouts=stereo,apad=whole_dur=${duration}${NO_BED ? '[v]' : ',asplit=2[v][key]'}`);

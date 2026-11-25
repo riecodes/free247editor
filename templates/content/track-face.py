@@ -52,13 +52,23 @@ cap.release()
 face_x = float(np.median(xs)) if xs else SRC_W / 2
 face_y = float(np.median(ys)) if ys else SRC_H * 0.3
 
-if portrait_out and SRC_W > SRC_H:
-    w, h = even(SRC_H * 9 / 16), SRC_H
+# "cropZoom": 1.3 (with "faceAt": 0.34, the face's height in the frame) punches in on footage shot wide in the output's
+# own shape, e.g. a phone propped far away (user note 2026-11-24: like the posted version of the same video)
+zoom = float(cfg.get('cropZoom') or 1)
+cropped = (portrait_out and SRC_W > SRC_H) or zoom > 1
+if cropped:
+    if portrait_out and SRC_W > SRC_H:
+        w, h = even(SRC_H * 9 / 16 / zoom), even(SRC_H / zoom)
+    else:
+        w, h = even(SRC_W / zoom), even(SRC_H / zoom)
     x = int(np.clip(round(face_x - w / 2), 0, SRC_W - w))
-    geom = {'w': w, 'h': h, 'x': x, 'y': 0}
+    y = int(np.clip(round(face_y - float(cfg.get('faceAt', 0.36)) * h), 0, SRC_H - h)) if h < SRC_H else 0
+    geom = {'w': w, 'h': h, 'x': x, 'y': y}
     # user note 2026-11-23 ("nawala sa alignment ang tao ... pakiayos para sa pag-center"): each section gets its own
     # fixed crop centered on where the speaker stands in it (still no tracking: the crop never moves inside a section)
-    if cfg.get('centerPerSection', True):
+    # "steady": true keeps ONE fixed crop for the whole video (user note 2026-11-24: per-piece crops jumped at every cut and
+    # the smooth follow drifted; "nakakahilo, gawin mong steady"). Use it when the speaker sits still.
+    if cfg.get('centerPerSection', True) and not cfg.get('steady'):
         geom['sectionX'] = {lab: int(np.clip(round(float(np.median(v)) - w / 2), 0, SRC_W - w)) for lab, v in by_label.items() if len(v) >= 2}
         # user note 2026-11-23 #3 ("hindi parin maganda ang pagkakacenter"): she drifts inside a long answer, so every
         # cut piece gets its own fixed crop (falls back to its section's when a piece has too few face samples)
@@ -87,7 +97,7 @@ if portrait_out and SRC_W > SRC_H:
             geom['pieceTrack'] = track
         geom['pieceX'] = [int(np.clip(round(float(np.median(by_piece[i])) - w / 2), 0, SRC_W - w)) if len(by_piece.get(i, [])) >= 2
                           else geom['sectionX'].get(p['label'], x) for i, p in enumerate(pieces)]
-else:  # landscape (or portrait footage): the whole frame as shot
+else:  # footage already in the output's shape and no cropZoom: the whole frame as shot
     geom = {'w': SRC_W, 'h': SRC_H, 'x': 0, 'y': 0}
 # face position inside the output frame, 0..1, for the emphasis-zoom origin
 geom.update({'srcW': SRC_W, 'srcH': SRC_H, 'follow': False,

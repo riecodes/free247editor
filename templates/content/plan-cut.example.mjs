@@ -48,7 +48,9 @@ if (cutTags && existsSync('raw-fillers.json')) {
   raw.forEach((w, i) => {
     const x = bw(w), n = bw(raw[i + 1]), p = bw(raw[i - 1]);
     const pair = x === 'all' && n === 'right';
-    const isTag = x === 'okay' || x === 'alright' || (x === 'right' && n !== 'now' && p !== 'all') || pair;
+    // "right" is a tag only when it closes a phrase ("..., right?"), never inside one ("asking the right questions" was cut once)
+    const closes = /[,?.!]$/.test(w.text.trim());
+    const isTag = x === 'okay' || x === 'alright' || (x === 'right' && closes && n !== 'now' && p !== 'all') || pair;
     if (!isTag || inCut(w.start) || !kept(w.start)) return;
     const last = pair ? raw[i + 1] : w, next = raw[i + (pair ? 2 : 1)], prev = raw[i - 1];
     const [a, da] = argmin(Math.max(prev ? prev.end - 0.03 : 0, w.start - 0.3), w.start + 0.06);
@@ -66,6 +68,9 @@ if (cutTags && existsSync('raw-fillers.json')) {
 const silenceDb = -40; // FILL: about 13 dB over the room floor and under the soft words (quiet rooms have needed -58 / -60;
 // a value under the floor finds no pauses and the cut comes out empty)
 const reframe = 'smooth', centerNudge = [];
+// cropZoom > 1 punches in on footage shot wide in the output's own shape (a phone propped far away); faceAt = where the
+// face sits in the frame height
+const cropZoom = 1, faceAt = 0.36;
 
 // ---------- step 2: captions ----------
 // money and numbers the way they are written on screen: RM/â‚±/$ amounts with commas, "70%" (check every number)
@@ -133,7 +138,7 @@ const extraSfx = [
   // { at: { word: 'register' }, k: 'riser', pre: 2.84, len: 2.84, gain: -26 }, // builds into the CTA
 ];
 
-writeFileSync('content.json', JSON.stringify({ format: 'portrait', title: 'FILL - content', noisyRoom: false, reframe, centerNudge,
+writeFileSync('content.json', JSON.stringify({ format: 'portrait', title: 'FILL - content', noisyRoom: false, reframe, centerNudge, cropZoom, faceAt,
   silenceDb, sections, fillers, broll, wordFixes, capTop, capKeywords, safe, keepColor, look, hook, name, pills, emphasis, splits, zooms, outro,
   music, musicEven, bedGain, sfxTrim, sounds, extraSfx }, null, 2));
 console.log(JSON.stringify(sections.map((s) => s.slice(0, 3))), `${fillers.length} cuts`);

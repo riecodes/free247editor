@@ -6,7 +6,13 @@ import { spawnSync } from 'node:child_process';
 
 const here = (p) => new URL(p, import.meta.url);
 const C = JSON.parse(readFileSync(here('./content.json'), 'utf8').replace(/^\uFEFF/, '')); // BOM-safe (Notepad)
-const MAX_PAUSE = 0.28, PAD = 0.09;
+// "maxPause" / "padIn" / "padOut" (user note 2026-11-24: "hindi pa tapos magsalita, nakakat na"): a speaker whose words trail
+// off softly needs a longer tail kept after each word (padOut) and a little more before the next one (padIn)
+const MAX_PAUSE = C.maxPause ?? 0.28, PAD_IN = C.padIn ?? 0.09, PAD_OUT = C.padOut ?? 0.09;
+// "pauseTo": 0.3 evens every pause out (user note 2026-11-24 "ayusin mo yung mga pauses"): a longer pause becomes exactly
+// that long, 60% of it kept after the word that ends (its soft tail) and 40% before the next one
+let maxPause = MAX_PAUSE, padIn = PAD_IN, padOut = PAD_OUT;
+if (C.pauseTo) { maxPause = C.pauseTo; padOut = C.pauseTo * 0.6; padIn = C.pauseTo * 0.4; }
 const probe = (entries) => spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', entries, '-of', 'csv=p=0', 'raw.mp4'],
   { cwd: here('.'), encoding: 'utf8' }).stdout.trim();
 const [num, den] = probe('stream=r_frame_rate').split('/').map(Number);
@@ -51,15 +57,15 @@ for (const [label, a, z, note] of ranges) {
     const quiet = db(t) < THRESH;
     if (quiet && runStart === null) runStart = t;
     if (!quiet && runStart !== null) {
-      if (t - runStart > MAX_PAUSE && runStart - a > 0.1) cuts.push([runStart + PAD, t - PAD]);
+      if (t - runStart > maxPause && runStart - a > 0.1) cuts.push([runStart + padOut, t - padIn]);
       // a pause at the very start of a range (right after a filler cut) is trimmed too
-      else if (t - runStart > MAX_PAUSE) cur = Math.max(cur, t - PAD);
+      else if (t - runStart > maxPause) cur = Math.max(cur, t - padIn);
       runStart = null;
     }
   }
   // and a pause at the very end of a range (right before a filler cut), which left a frozen beat before a
   // jump at the join (user note 2026-11-18)
-  if (runStart !== null && z - runStart > MAX_PAUSE && runStart - a > 0.1) end = runStart + PAD;
+  if (runStart !== null && z - runStart > maxPause && runStart - a > 0.1) end = runStart + padOut;
   for (const [s, e] of cuts) { pieces.push({ label, note, start: cur, end: s }); cur = e; }
   pieces.push({ label, note, start: cur, end });
 }
